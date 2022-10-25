@@ -1,0 +1,25 @@
+on:
+  push:
+  pull_request:
+
+jobs:
+  tsc:
+    name: tsc
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+
+    - name: Install Node.JS LTS
+      uses: actions/setup-node@v3
+      with:
+        node-version: lts/*
+
+    - name: Install Dependencies
+      run: pnpm install
+
+    - name: Lint Project
+      run: npm run lint
+
+    - name: Build Project
+      run: npm run build
