@@ -3,7 +3,7 @@ on:
   pull_request:
 
 jobs:
-  tsc:
+  build:
     name: tsc
     runs-on: ubuntu-latest
     steps:
@@ -17,6 +17,8 @@ jobs:
 
     - name: Setup pNPM
       uses: pnpm/action-setup@v2
+      with:
+        version: latest
 
     - name: Install Dependencies
       run: pnpm install
