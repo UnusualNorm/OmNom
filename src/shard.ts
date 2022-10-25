@@ -11,7 +11,7 @@ const client = new SapphireClient({
   shardCount: clientInitData.TOTAL_SHARDS,
 });
 
-client.machine = new Shard(client.cluster);
 client.cluster = new Client(client);
+client.machine = new Shard(client.cluster);
 
 client.login(env.DISCORD_TOKEN);
