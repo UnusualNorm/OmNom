@@ -13,6 +13,7 @@ const envRules = {
   CLUSTER_TOTAL_SHARDS: "integer|min:1",
   CLUSTER_TOTAL_CLUSTERS: "integer|min:1",
   DISCORD_TOKEN: "required|string",
+  DB_TABLE_NAME: "required|string"
 };
 
 const env: typeof envRules = process.env as typeof envRules;
