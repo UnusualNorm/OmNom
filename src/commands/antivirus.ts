@@ -2,6 +2,7 @@ import { Command, RegisterBehavior } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Subcommand } from "@sapphire/plugin-subcommands";
 import type { ChatInputCommandInteraction } from "discord.js";
+import type { AntiVirusOptions } from "../types/antivirus.js";
 
 @ApplyOptions<Subcommand.Options>({
   name: "antivirus",
@@ -77,7 +78,13 @@ export class AntiVirusCommand extends Subcommand {
     });
 
     // Fetch the entry from the database
-    const option = 
+    const option = (
+      await this.container.client
+        .db<AntiVirusOptions>("antivirus")
+        .where("id", interaction.guildId)
+        .select("manual")
+        .first()
+    )?.manual;
 
     // If the correct value is already stored
     if (enabled != null && enabled == option)

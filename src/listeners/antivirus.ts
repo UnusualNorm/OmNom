@@ -1,6 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Listener } from "@sapphire/framework";
 import type { MessageReaction } from "discord.js";
+import type { AntiVirusOptions } from '../types/antivirus.js';
 
 @ApplyOptions<Listener.Options>({
   name: "antivirusManualListener",
@@ -9,15 +10,14 @@ import type { MessageReaction } from "discord.js";
 export class AntiVirusManualListener extends Listener {
   async run(messageReaction: MessageReaction) {
     if (messageReaction.emoji.identifier != "🕷") return;
-
-    // Fetch the entry from the database
+    
     const enabled = (
-      await this.container.client
+      messageReaction?(await this.container.client
         .db<AntiVirusOptions>("antivirus")
-        .where("id", interaction.guildId)
+        .where("id", messageReaction.guildId)
         .select("manual")
         .first()
-    )?.manual;
+    )?.manual):true;
 
     if (!enabled) return;
   }
