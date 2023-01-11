@@ -44,7 +44,7 @@ export enum AVEngineName {
 
 export type AVEngine = (typeof knownEngines)[number];
 
-type JobProgressResponse = {
+export interface JobProgress = {
   id: string;
   meta: {
     startstamp: string;
@@ -88,12 +88,12 @@ export async function getProgress(jobId: string) {
     `https://virusscan.jotti.org/ajax/filescanjobprogress.php?id=${jobId}&lang=en-US&_=${Date.now()}`
   );
 
-  const jobProgressJson: JobProgressResponse = JSON.parse(jobProgressResponse);
+  const jobProgressJson: JobProgress = JSON.parse(jobProgressResponse);
   return jobProgressJson;
 }
 
-export function awaitResults(jobId: string) {
-  return new Promise<JobProgressResponse>((resolve) => {
+export function getResults(jobId: string) {
+  return new Promise<JobProgress>((resolve) => {
     const jobRefreshInterval = setInterval(async () => {
       const jobProgress = await getProgress(jobId);
 

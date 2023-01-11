@@ -4,7 +4,7 @@ import { Listener } from "@sapphire/framework";
 import type { Message, PartialMessage, MessageReaction } from "discord.js";
 import path from "path";
 import type { AntiVirusOptions } from "../types/antivirus.js";
-import { createJob } from "../utils/jotti.js";
+import { createJob, JobProgress, getResults } from "../utils/jotti.js";
 
 const analysisQueue: (() => Promise<void>)[] = [];
 
@@ -46,7 +46,11 @@ async function startAnalysis(
     await uploadReact.remove();
     const analyzeReact = await msg.react('🔎');
     
-    const result
+    const results = await Promise.all(
+      jobs.map(async (job): Promise<[string, JobProgress]> => ([attachment[0], await getResults(job)]))
+    )
+
+    await analyzeReact.remove();
   });
   if (analysisQueue.length == 1) startQueue();
 }
