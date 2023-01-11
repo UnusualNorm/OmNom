@@ -1,22 +1,21 @@
-import "dotenv-defaults/config";
-import Validator from "validatorjs";
+import "dotenv-defaults/config.js";
+import env from "env-var";
 
-const envRules = {
-  BRIDGE_HOST: "string",
-  BRIDGE_PORT: "required|integer|min:1|max:65535",
-  BRIDGE_TOKEN: "required|string",
-  BRIDGE_TOTAL_MACHINES: "required|integer",
-  BRIDGE_TOTAL_SHARDS: "integer|min:1",
-  BRIDGE_SHARDS_PER_CLUSTER: "integer|min:1",
-  BRIDGE_HANDSHAKE: "string", // Boolean
-  BRIDGE_ROLLING_RESTARTS: "string", // Boolean
-  CLUSTER_TOTAL_SHARDS: "integer|min:1",
-  CLUSTER_TOTAL_CLUSTERS: "integer|min:1",
-  DISCORD_TOKEN: "required|string",
+export default {
+  BRIDGE_HOST: env.get("BRIDGE_HOST").required().asString(),
+  BRIDGE_PORT: env.get("BRIDGE_PORT").required().asIntPositive(),
+  BRIDGE_TOKEN: env.get("BRIDGE_TOKEN").required().asString(),
+  BRIDGE_TOTAL_MACHINES: env
+    .get("BRIDGE_TOTAL_MACHINES")
+    .required()
+    .asIntPositive(),
+  BRIDGE_TOTAL_SHARDS: env.get("BRIDGE_TOTAL_SHARDS").asIntPositive(),
+  BRIDGE_SHARDS_PER_CLUSTER: env
+    .get("BRIDGE_SHARDS_PER_CLUSTER")
+    .asIntPositive(),
+  BRIDGE_HANDSHAKE: env.get("BRIDGE_HANDSHAKE").asBool(),
+  BRIDGE_ROLLING_RESTARTS: env.get("BRIDGE_ROLLING_RESTARTS").asBool(),
+  CLUSTER_TOTAL_SHARDS: env.get("CLUSTER_TOTAL_SHARDS").asIntPositive(),
+  CLUSTER_TOTAL_CLUSTERS: env.get("CLUSTER_TOTAL_CLUSTERS").asIntPositive(),
+  DISCORD_TOKEN: env.get("DISCORD_TOKEN").required().asString(),
 };
-
-const env: typeof envRules = process.env as typeof envRules;
-const envValidator = new Validator(env, envRules);
-
-if (envValidator.fails()) throw new TypeError("Uh-oh, your config is WRONG!\n"+JSON.stringify(envValidator.errors.errors));
-export default env;
