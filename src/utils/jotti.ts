@@ -64,7 +64,7 @@ type JobProgressResponse = {
   filescanjobmeta: unknown[]; // I was unable to get this to be a non-empty array
 };
 
-export async function malwareScan(file: Buffer, fileName: string) {
+export async function createJob(file: Buffer, fileName: string) {
   const fileUploadData = new FormData();
   fileUploadData.append("sample-file[]", file, fileName);
 
@@ -83,7 +83,7 @@ export async function malwareScan(file: Buffer, fileName: string) {
   return jobId;
 }
 
-export async function getResults(jobId: string) {
+export async function getProgress(jobId: string) {
   const jobProgressResponse = await ReFetch(
     `https://virusscan.jotti.org/ajax/filescanjobprogress.php?id=${jobId}&lang=en-US&_=${Date.now()}`
   );
@@ -92,10 +92,10 @@ export async function getResults(jobId: string) {
   return jobProgressJson;
 }
 
-export function awaitFullResults(jobId: string) {
+export function awaitResults(jobId: string) {
   return new Promise<JobProgressResponse>((resolve) => {
     const jobRefreshInterval = setInterval(async () => {
-      const jobProgress = await getResults(jobId);
+      const jobProgress = await getProgress(jobId);
 
       if (
         knownEngines.every((engine) =>
