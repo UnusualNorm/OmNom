@@ -1,5 +1,5 @@
 import FormData from "form-data";
-import { ReFetch } from "./tor";
+import { fetch, FetchResultTypes } from "@sapphire/fetch";
 import path from "path";
 
 type FileUploadResponse = {
@@ -44,7 +44,7 @@ export enum AVEngineName {
 
 export type AVEngine = (typeof knownEngines)[number];
 
-export interface JobProgress = {
+export interface JobProgress {
   id: string;
   meta: {
     startstamp: string;
@@ -62,34 +62,34 @@ export interface JobProgress = {
     };
   };
   filescanjobmeta: unknown[]; // I was unable to get this to be a non-empty array
-};
+}
 
 export async function createJob(file: Buffer, fileName: string) {
   const fileUploadData = new FormData();
   fileUploadData.append("sample-file[]", file, fileName);
 
-  const fileUploadResponse = await ReFetch(
+  const fileUploadResponse: FileUploadResponse = await fetch(
     "https://virusscan.jotti.org/en-US/submit-file?isAjax=true",
     {
       method: "POST",
       body: fileUploadData,
-    }
+    },
+    FetchResultTypes.JSON
   );
 
-  const fileUploadJson: FileUploadResponse = JSON.parse(fileUploadResponse);
-  const jobId = path.basename(fileUploadJson.redirecturl);
-  await ReFetch(`https://virusscan.jotti.org/en-US/filescanjob/${jobId}`);
+  const jobId = path.basename(fileUploadResponse.redirecturl);
+  await fetch(`https://virusscan.jotti.org/en-US/filescanjob/${jobId}`);
 
   return jobId;
 }
 
 export async function getProgress(jobId: string) {
-  const jobProgressResponse = await ReFetch(
-    `https://virusscan.jotti.org/ajax/filescanjobprogress.php?id=${jobId}&lang=en-US&_=${Date.now()}`
+  const jobProgress: JobProgress = await fetch(
+    `https://virusscan.jotti.org/ajax/filescanjobprogress.php?id=${jobId}&lang=en-US&_=${Date.now()}`,
+    FetchResultTypes.JSON
   );
-
-  const jobProgressJson: JobProgress = JSON.parse(jobProgressResponse);
-  return jobProgressJson;
+  
+  return jobProgress;
 }
 
 export function getResults(jobId: string) {
