@@ -1,6 +1,6 @@
 import "./types/discord.js"; // Hehehe-hohoho, FIX THIS PLEASE
 import "@sapphire/plugin-subcommands/register";
-import { ActivityType, GatewayIntentBits } from "discord.js";
+import { ActivityType, GatewayIntentBits, Partials } from "discord.js";
 import { SapphireClient } from "@sapphire/framework";
 // import hosting from "discord-cross-hosting";
 // import sharding from "discord-hybrid-sharding";
@@ -17,6 +17,16 @@ const client = new SapphireClient({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.DirectMessageReactions,
+    GatewayIntentBits.MessageContent,
+  ],
+  partials: [
+    Partials.Channel,
+    Partials.GuildMember,
+    Partials.GuildScheduledEvent,
+    Partials.Message,
+    Partials.Reaction,
+    Partials.ThreadMember,
+    Partials.User,
   ],
   // shards: clientInitData.SHARD_LIST,
   // shardCount: clientInitData.TOTAL_SHARDS,

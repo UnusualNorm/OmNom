@@ -7,6 +7,7 @@ import {
   MessageReaction,
   EmbedBuilder,
   PermissionFlagsBits,
+  PartialMessageReaction,
 } from "discord.js";
 import path from "path";
 import type { AntiVirusOptions } from "../types/antivirus.js";
@@ -31,30 +32,29 @@ async function startAnalysis(
   message: Message | PartialMessage,
   force: boolean
 ) {
-  const msg = message.partial ? await message.fetch() : message;
-  const queueReact = await msg.react("⏳");
+  if (message.partial) message = await message.fetch();
+  const queueReact = await message.react("⏳");
 
   analysisQueue.push(async () => {
     await queueReact.remove();
-    const downloadReact = await msg.react("🛰");
+    const attachments = Array.from(message.attachments.values()).filter(
+      (attachment) =>
+        force || attachment.contentType?.startsWith("application/")
+    );
+    if (attachments.length == 0) return;
+
+    const downloadReact = await message.react("🛰");
     const files = await Promise.all(
-      Array.from(message.attachments.values())
-        .filter(
-          (attachment) =>
-            force || attachment.contentType?.startsWith("application/")
-        )
-        .map(
-          async (attachment): Promise<[string, Buffer]> => [
-            path.basename(new URL(attachment.url).pathname),
-            await fetch(attachment.url, FetchResultTypes.Buffer),
-          ]
-        )
+      attachments.map(
+        async (attachment): Promise<[string, Buffer]> => [
+          path.basename(new URL(attachment.url).pathname),
+          await fetch(attachment.url, FetchResultTypes.Buffer),
+        ]
+      )
     );
 
-    if (files.length == 0) return;
-
     await downloadReact.remove();
-    const uploadReact = await msg.react("📡");
+    const uploadReact = await message.react("📡");
     const jobs = await Promise.all(
       files.map(
         async (attachment): Promise<[string, string]> => [
@@ -65,7 +65,7 @@ async function startAnalysis(
     );
 
     await uploadReact.remove();
-    const analyzeReact = await msg.react("🔎");
+    const analyzeReact = await message.react("🔎");
 
     const results = await Promise.all(
       jobs.map(
@@ -104,7 +104,7 @@ async function startAnalysis(
         )
     );
 
-    await msg.reply({
+    await message.reply({
       embeds,
     });
   });
@@ -116,14 +116,18 @@ async function startAnalysis(
   event: "messageReactionAdd",
 })
 export class AntiVirusManualListener extends Listener {
-  async run(messageReaction: MessageReaction) {
+  async run(messageReaction: MessageReaction | PartialMessageReaction) {
+    if (messageReaction.partial)
+      messageReaction = await messageReaction.fetch();
+
     const {
       emoji,
       message,
       message: { channel },
     } = messageReaction;
+    if (message.author?.bot) return;
 
-    if (emoji.identifier != "🕷") return;
+    if (emoji.identifier != encodeURIComponent("🔍")) return;
     if (
       !channel.isDMBased() &&
       (!channel
@@ -134,6 +138,7 @@ export class AntiVirusManualListener extends Listener {
           ?.has(PermissionFlagsBits.SendMessages))
     )
       return;
+
     const enabled = message.inGuild()
       ? (
           await this.container.client
@@ -145,7 +150,6 @@ export class AntiVirusManualListener extends Listener {
       : true;
 
     if (!enabled) return;
-
     return startAnalysis(messageReaction.message, true);
   }
 }

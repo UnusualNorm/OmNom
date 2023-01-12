@@ -73,9 +73,24 @@ export async function createJob(file: Buffer, fileName: string) {
     {
       method: "POST",
       body: fileUploadData,
+      // headers: {
+      //   Accept: "application/json, text/javascript, */*;",
+      //   "Accept-Encoding": "gzip, deflate, br",
+      //   "Accept-Language": "en-US,en;",
+      //   // Cookie: "sessionid=0flnbvm93ah6jpmkrp8flmbhrp; lang=en-US",
+      //   Host: "virusscan.jotti.org",
+      //   Origin: "https://virusscan.jotti.org",
+      //   Referer: "https://virusscan.jotti.org/en-US/scan-file",
+      //   "Content-Type": "multipart/form-data;",
+      //   "User-Agent":
+      //     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
+      //   "X-Requested-With": "XMLHttpRequest",
+      // },
     },
     FetchResultTypes.JSON
   );
+
+  if (fileUploadResponse.redirecturl == "/en-US") throw new Error();
 
   const jobId = path.basename(fileUploadResponse.redirecturl);
   await fetch(`https://virusscan.jotti.org/en-US/filescanjob/${jobId}`);
@@ -88,7 +103,7 @@ export async function getProgress(jobId: string) {
     `https://virusscan.jotti.org/ajax/filescanjobprogress.php?id=${jobId}&lang=en-US&_=${Date.now()}`,
     FetchResultTypes.JSON
   );
-  
+
   return jobProgress;
 }
 
