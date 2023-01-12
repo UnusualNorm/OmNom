@@ -24,7 +24,7 @@ export const knownEngines = [
   "vba32",
 ] as const;
 
-export enum AVEngineName {
+export enum EngineNames {
   "avast" = "Avast",
   "bitdefender" = "Bitdefender",
   "clamav" = "ClamAV",
@@ -54,7 +54,7 @@ export interface JobProgress {
     noresulttext: string;
   };
   filescanner: {
-    [key in AVEngine]: {
+    [key in AVEngine]?: {
       sigfiledate: string;
       resulttext: string;
       malwarename: string;
@@ -64,33 +64,22 @@ export interface JobProgress {
   filescanjobmeta: unknown[]; // I was unable to get this to be a non-empty array
 }
 
-export async function createJob(file: Buffer, fileName: string) {
-  const fileUploadData = new FormData();
-  fileUploadData.append("sample-file[]", file, fileName);
+export async function createJob(filename: string, file: Buffer) {
+  const form = new FormData();
+  form.append("sample-file[]", file, { filename });
 
   const fileUploadResponse: FileUploadResponse = await fetch(
     "https://virusscan.jotti.org/en-US/submit-file?isAjax=true",
     {
       method: "POST",
-      body: fileUploadData,
-      // headers: {
-      //   Accept: "application/json, text/javascript, */*;",
-      //   "Accept-Encoding": "gzip, deflate, br",
-      //   "Accept-Language": "en-US,en;",
-      //   // Cookie: "sessionid=0flnbvm93ah6jpmkrp8flmbhrp; lang=en-US",
-      //   Host: "virusscan.jotti.org",
-      //   Origin: "https://virusscan.jotti.org",
-      //   Referer: "https://virusscan.jotti.org/en-US/scan-file",
-      //   "Content-Type": "multipart/form-data;",
-      //   "User-Agent":
-      //     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
-      //   "X-Requested-With": "XMLHttpRequest",
-      // },
+      body: form,
+      headers: form.getHeaders(),
     },
     FetchResultTypes.JSON
   );
 
-  if (fileUploadResponse.redirecturl == "/en-US") throw new Error();
+  if (fileUploadResponse.redirecturl == "/en-US")
+    throw new Error("Failed to upload file...");
 
   const jobId = path.basename(fileUploadResponse.redirecturl);
   await fetch(`https://virusscan.jotti.org/en-US/filescanjob/${jobId}`);
@@ -98,28 +87,20 @@ export async function createJob(file: Buffer, fileName: string) {
   return jobId;
 }
 
-export async function getProgress(jobId: string) {
-  const jobProgress: JobProgress = await fetch(
+export const getProgress = (jobId: string): Promise<JobProgress> =>
+  fetch(
     `https://virusscan.jotti.org/ajax/filescanjobprogress.php?id=${jobId}&lang=en-US&_=${Date.now()}`,
     FetchResultTypes.JSON
   );
 
-  return jobProgress;
-}
-
-export function getResults(jobId: string) {
-  return new Promise<JobProgress>((resolve) => {
+export const getResults = (jobId: string) =>
+  new Promise<JobProgress>((resolve) => {
     const jobRefreshInterval = setInterval(async () => {
       const jobProgress = await getProgress(jobId);
 
-      if (
-        knownEngines.every((engine) =>
-          Object.keys(jobProgress.filescanner).includes(engine)
-        )
-      ) {
+      if (knownEngines.every((engine) => engine in jobProgress.filescanner)) {
         clearInterval(jobRefreshInterval);
         resolve(jobProgress);
       }
     }, 1000);
   });
-}

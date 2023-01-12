@@ -16,7 +16,7 @@ import {
   JobProgress,
   getResults,
   knownEngines,
-  AVEngineName,
+  EngineNames,
 } from "../utils/jotti.js";
 
 const analysisQueue: (() => Promise<void>)[] = [];
@@ -59,7 +59,7 @@ async function startAnalysis(
       files.map(
         async (attachment): Promise<[string, string]> => [
           attachment[0],
-          await createJob(attachment[1], attachment[0]),
+          await createJob(attachment[0], attachment[1]),
         ]
       )
     );
@@ -91,7 +91,7 @@ async function startAnalysis(
         })
         .setFields(
           knownEngines.map((scanner) => {
-            const name = AVEngineName[scanner];
+            const name = EngineNames[scanner];
             if (!result[2].filescanner[scanner])
               return { name, value: "unknown" };
 
