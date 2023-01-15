@@ -196,10 +196,20 @@
   dependencies:
     discord-api-types "^0.37.25"
 
-"@sapphire/discord.js-utilities@6.0.0", "@sapphire/discord.js-utilities@^6.0.0":
+"@sapphire/discord.js-utilities@6.0.0":
   version "6.0.0"
   resolved "https://registry.yarnpkg.com/@sapphire/discord.js-utilities/-/discord.js-utilities-6.0.0.tgz#0b55eabfe43ec0f3d28b1f3a49238af37bc9993c"
   integrity sha512-WqYeLeUATpIZysTEeYbHxYxrR4A/lQidTJX0vTgbTORAEUo0Zn5H7zDeoJz1zZtaS1wTL1qrnnY5rNYvH1D9Bg==
+  dependencies:
+    "@sapphire/discord-utilities" "^3.0.0"
+    "@sapphire/duration" "^1.0.0"
+    "@sapphire/utilities" "^3.11.0"
+    tslib "^2.4.1"
+
+"@sapphire/discord.js-utilities@^6.0.1":
+  version "6.0.1"
+  resolved "https://registry.yarnpkg.com/@sapphire/discord.js-utilities/-/discord.js-utilities-6.0.1.tgz#999ac28c4f4dbce2f3c6586235735ab950109f55"
+  integrity sha512-9XXLe/pycr203RMk6gVyI7ox3PuElGuix+1y+GLCOIhSC8JV2YmTO4A+G9zzggOmV7l5iwmRt8ttQMJnPaUG2w==
   dependencies:
     "@sapphire/discord-utilities" "^3.0.0"
     "@sapphire/duration" "^1.0.0"
