@@ -25,6 +25,10 @@ const filters = Object.values(rawFilters) as Filter[];
       name: "remove",
       chatInputRun: "remove",
     },
+    {
+      name: "status",
+      chatInputRun: "status",
+    },
   ],
 })
 export class AntiVirusCommand extends Subcommand {
@@ -34,9 +38,7 @@ export class AntiVirusCommand extends Subcommand {
         builder
           .setName("filter")
           .setDescription(
-            `Change ${
-              this.container.client.user?.username || "Bot"
-            } filter settings!`
+            `Change ${this.container.client.user!.username} filter settings!`
           )
           .addSubcommand((builder) =>
             builder
@@ -55,6 +57,11 @@ export class AntiVirusCommand extends Subcommand {
                   .setRequired(true)
                   .setDescription("The target to apply the filter to.")
               )
+          )
+          .addSubcommand((builder) =>
+            builder
+              .setName("status")
+              .setDescription("Check how many channels support filtering!")
           ),
       {
         behaviorWhenNotIdentical: RegisterBehavior.Overwrite,
@@ -77,10 +84,46 @@ export class AntiVirusCommand extends Subcommand {
     interaction.respond(autoCompleteMap);
   }
 
+  public status(interaction: ChatInputCommandInteraction) {
+    if (!interaction.inGuild())
+      return interaction.reply({
+        content: "This is a guild-only command...",
+        ephemeral: true,
+      });
+
+    const channels = interaction.guild!.channels.cache.filter(
+      (channel) =>
+        channel.isTextBased() &&
+        channel
+          .permissionsFor(this.container.client.user!.id)
+          ?.has(PermissionFlagsBits.ViewChannel)
+    );
+
+    const supportedChannels = channels.filter(
+      (channel) =>
+        channel
+          .permissionsFor(this.container.client.user!.id)
+          ?.has(PermissionFlagsBits.ManageMessages) &&
+        channel
+          .permissionsFor(this.container.client.user!.id)
+          ?.has(PermissionFlagsBits.ManageWebhooks)
+    );
+
+    return interaction.reply({
+      content: `${this.container.client.user!.username} filters work in ${
+        supportedChannels.size
+      }/${channels.size} channels!`,
+      ephemeral: true,
+    });
+  }
+
   // The listener is currently capable of handling multiple filters per target. Just need to implement it here.
   public async apply(interaction: ChatInputCommandInteraction) {
     if (!interaction.inGuild())
-      return interaction.reply("This is a guild-only command...");
+      return interaction.reply({
+        content: "This is a guild-only command...",
+        ephemeral: true,
+      });
 
     const filterName = interaction.options.getString("filter");
     if (!Object.values(filters).find((filter) => filter.name == filterName))

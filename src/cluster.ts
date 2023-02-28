@@ -1,27 +1,26 @@
-// WIP: Need to optimize database more
-
-import env from "./env.js";
+import env from "./env/cluster.js";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import hosting from "discord-cross-hosting";
 import { Manager } from "discord-hybrid-sharding";
+import { join } from "path";
 
 const { Client } = hosting;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const client = new Client({
   agent: "bot",
-  host: env.BRIDGE_HOST,
-  port: env.BRIDGE_PORT,
+  host: env.BRIDGE_HOST || "localhost",
+  port: env.BRIDGE_PORT || 4444,
   handshake: env.BRIDGE_HANDSHAKE || false,
-  authToken: env.BRIDGE_TOKEN,
+  authToken: env.BRIDGE_TOKEN || "token",
   rollingRestarts: env.BRIDGE_HANDSHAKE || false,
 });
 
 client.on("debug", console.debug);
 client.connect();
 
-const manager = new Manager(`${__dirname}/shard.js`, {
+const manager = new Manager(join(__dirname, "bot.js"), {
   totalShards: env.CLUSTER_TOTAL_SHARDS || "auto",
   totalClusters: env.CLUSTER_TOTAL_CLUSTERS || "auto",
 });

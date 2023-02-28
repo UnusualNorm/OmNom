@@ -1,4 +1,3 @@
-import "./types/discord.js"; // Hehehe-hohoho, FIX THIS PLEASE
 import "@sapphire/plugin-subcommands/register";
 import { ActivityType, GatewayIntentBits, Partials } from "discord.js";
 import { SapphireClient } from "@sapphire/framework";
