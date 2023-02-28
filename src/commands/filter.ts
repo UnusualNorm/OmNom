@@ -29,6 +29,10 @@ const filters = Object.values(rawFilters) as Filter[];
       name: "status",
       chatInputRun: "status",
     },
+    {
+      name: "preview",
+      chatInputRun: "preview",
+    },
   ],
 })
 export class AntiVirusCommand extends Subcommand {
@@ -60,8 +64,37 @@ export class AntiVirusCommand extends Subcommand {
           )
           .addSubcommand((builder) =>
             builder
+              .setName("remove")
+              .setDescription("Remove the filter from a target!")
+              .addMentionableOption((builder) =>
+                builder
+                  .setName("target")
+                  .setRequired(true)
+                  .setDescription("The target to remove the filter from.")
+              )
+          )
+          .addSubcommand((builder) =>
+            builder
               .setName("status")
               .setDescription("Check how many channels support filtering!")
+          )
+          .addSubcommand((builder) =>
+            builder
+              .setName("preview")
+              .setDescription("See how a filter affects your messages!")
+              .addStringOption((builder) =>
+                builder
+                  .setName("filter")
+                  .setRequired(true)
+                  .setAutocomplete(true)
+                  .setDescription("The filter to apply to the text.")
+              )
+              .addStringOption((builder) =>
+                builder
+                  .setName("text")
+                  .setRequired(true)
+                  .setDescription("The text to apply the filter to.")
+              )
           ),
       {
         behaviorWhenNotIdentical: RegisterBehavior.Overwrite,
@@ -73,7 +106,7 @@ export class AntiVirusCommand extends Subcommand {
     // This assumes that we only want to autocomplete filters.
     const focusedValue = interaction.options.getFocused().toString();
     const autoComplete = filters.filter((filter) =>
-      filter.name.startsWith(focusedValue)
+      filter.friendlyName.toLowerCase().startsWith(focusedValue.toLowerCase())
     );
 
     const autoCompleteMap = autoComplete.map((choice) => ({
@@ -82,6 +115,22 @@ export class AntiVirusCommand extends Subcommand {
     }));
 
     interaction.respond(autoCompleteMap);
+  }
+
+  public async preview(interaction: ChatInputCommandInteraction) {
+    const filterName = interaction.options.getString("filter");
+    const filter = filters.find((filter) => filter.name == filterName);
+
+    if (!filter)
+      return interaction.editReply(`Invalid filter: ${filterName}...`);
+
+    await interaction.deferReply({
+      ephemeral: true,
+    });
+
+    const text = interaction.options.getString("text");
+    const preview = await filter.preview(text || "");
+    return interaction.editReply(preview);
   }
 
   public status(interaction: ChatInputCommandInteraction) {
@@ -150,16 +199,17 @@ export class AntiVirusCommand extends Subcommand {
 
     await this.container.client
       .db("filters")
+      .delete()
       .where("id", target.id)
       .where("guild", interaction.guildId)
-      .where("type", targetType)
-      .delete()
-      .insert({
-        id: target.id,
-        guild: interaction.guildId,
-        type: targetType,
-        filter: filterName as string,
-      });
+      .where("type", targetType);
+
+    await this.container.client.db("filters").insert({
+      id: target.id,
+      guild: interaction.guildId,
+      type: targetType,
+      filter: filterName as string,
+    });
 
     return interaction.editReply(
       `Applied filter "${filterName}" to <@${
@@ -170,11 +220,8 @@ export class AntiVirusCommand extends Subcommand {
 
   public async remove(interaction: ChatInputCommandInteraction) {
     if (!interaction.inGuild())
-      return interaction.reply("This is a guild-only command...");
-
-    if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild))
       return interaction.reply({
-        content: "You do not have valid permissions to use this command...",
+        content: "This is a guild-only command...",
         ephemeral: true,
       });
 
@@ -182,7 +229,8 @@ export class AntiVirusCommand extends Subcommand {
     const target = interaction.options.getMentionable("target");
     let targetType: "role" | "user";
     if (target instanceof Role) targetType = "role";
-    else if (target instanceof User) targetType = "user";
+    else if (target instanceof User || target instanceof GuildMember)
+      targetType = "user";
     else
       return interaction.reply({
         content: "Please supply a valid target...",
@@ -195,10 +243,10 @@ export class AntiVirusCommand extends Subcommand {
 
     await this.container.client
       .db("filters")
+      .delete()
       .where("id", target.id)
       .where("guild", interaction.guildId)
-      .where("type", targetType)
-      .delete();
+      .where("type", targetType);
 
     return interaction.editReply(
       `Removed all filters from <@${target instanceof Role ? "&" : ""}${

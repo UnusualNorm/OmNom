@@ -15,16 +15,16 @@ uwuifier.actions = [
   "*boops your nose*",
 ];
 
-export const uwu = {
+export const uwu: Filter = {
   name: "uwu",
   friendlyName: "UwU",
-  description:
-    "Become a mirror-dweller today for low-low price of your sanity!",
+  description: "OWO What's this?",
 
   run: (message) => ({
     ...message,
+    username: uwuifier.uwuifyWords(message.username || "Onii-Chan"),
     content: uwuifier.uwuifySentence(message.content || ""),
   }),
 
   preview: (text) => uwuifier.uwuifySentence(text),
-} as Filter;
+};

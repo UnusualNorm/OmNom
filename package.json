@@ -26,6 +26,8 @@
     "@sapphire/framework": "4.x",
     "@sapphire/plugin-subcommands": "^4.0.0",
     "@sapphire/utilities": "^3.11.0",
+    "@vitalets/google-translate-api": "^9.1.0",
+    "bad-words": "^3.0.4",
     "discord-api-types": "0.37.27",
     "discord-cross-hosting": "^2.3.2",
     "discord-hybrid-sharding": "^1.7.4",
@@ -39,6 +41,7 @@
   },
   "devDependencies": {
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",
+    "@types/bad-words": "^3.0.1",
     "@types/node": "^18.11.5",
     "@typescript-eslint/eslint-plugin": "^5.41.0",
     "@typescript-eslint/parser": "^5.41.0",
