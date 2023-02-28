@@ -1,3 +1,4 @@
+import "dotenv/config.js";
 import env from "env-var";
 
 export default {

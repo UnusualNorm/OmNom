@@ -30,6 +30,7 @@
     "discord-cross-hosting": "^2.3.2",
     "discord-hybrid-sharding": "^1.7.4",
     "discord.js": "14.x",
+    "dotenv": "^16.0.3",
     "env-var": "^7.3.0",
     "knex": "^2.4.0",
     "socks-proxy-agent": "^7.0.0",
@@ -38,7 +39,6 @@
   },
   "devDependencies": {
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",
-    "@types/dotenv-defaults": "^2.0.1",
     "@types/node": "^18.11.5",
     "@typescript-eslint/eslint-plugin": "^5.41.0",
     "@typescript-eslint/parser": "^5.41.0",
