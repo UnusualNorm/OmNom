@@ -2,7 +2,8 @@
   "extends": "@tsconfig/node-lts-strictest-esm/tsconfig.json",
   "compilerOptions": {
     "outDir": "dist/",
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "exactOptionalPropertyTypes": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules/", "dist/"]

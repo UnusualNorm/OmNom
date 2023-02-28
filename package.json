@@ -35,7 +35,8 @@
     "form-data": "^4.0.0",
     "knex": "^2.4.0",
     "socks-proxy-agent": "^7.0.0",
-    "sqlite3": "^5.1.4"
+    "sqlite3": "^5.1.4",
+    "uwuifier": "^4.0.5"
   },
   "devDependencies": {
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",
