@@ -21,7 +21,7 @@
   "license": "MIT",
   "dependencies": {
     "@sapphire/decorators": "^6.0.0",
-    "@sapphire/discord.js-utilities": "^6.0.0",
+    "@sapphire/discord.js-utilities": "^6.0.2",
     "@sapphire/fetch": "^2.4.1",
     "@sapphire/framework": "4.x",
     "@sapphire/plugin-subcommands": "^4.0.0",
