@@ -22,8 +22,10 @@ export const uwu: Filter = {
 
   run: (message) => ({
     ...message,
-    username: uwuifier.uwuifyWords(message.username || "Onii-Chan"),
-    content: uwuifier.uwuifySentence(message.content || ""),
+    username: message.username
+      ? uwuifier.uwuifyWords(message.username)
+      : "Onii-Chan",
+    content: message.content ? uwuifier.uwuifySentence(message.content) : "",
   }),
 
   preview: (text) => uwuifier.uwuifySentence(text),

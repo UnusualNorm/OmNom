@@ -8,8 +8,8 @@ export const reverse: Filter = {
 
   run: (message) => ({
     ...message,
-    username: reverseText(message.username || ""),
-    content: reverseText(message.content || ""),
+    username: message.username ? reverseText(message.username) : "",
+    content: message.content ? reverseText(message.content) : "",
   }),
 
   preview: (text) => reverseText(text),

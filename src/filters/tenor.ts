@@ -97,7 +97,7 @@ type TenorSearchOutput = {
 
 async function getGif(query: string): Promise<string | undefined> {
   const res = await fetch(
-    `https://g.tenor.com/v1/search?key=${apiKey}&limit=1&q=${encodeURIComponent(
+    `https://g.tenor.com/v1/search?key=${apiKey}&limit=1&contentfilter=high&q=${encodeURIComponent(
       query
     )}`
   );

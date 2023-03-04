@@ -72,7 +72,12 @@ export class FilterListener extends Listener {
           .find((filter) => filter.name == filterName)
           ?.run(newMessage)) || newMessage;
 
-    await webhook.send(newMessage);
+    await webhook.send({
+      ...newMessage,
+      allowedMentions: {
+        parse: [],
+      },
+    });
     await message.delete();
   }
 }

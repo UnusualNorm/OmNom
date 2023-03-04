@@ -9,8 +9,8 @@ export const badWords: Filter = {
 
   run: (message) => ({
     ...message,
-    username: filter.clean(message.username || ""),
-    content: filter.clean(message.content || ""),
+    username: message.username ? filter.clean(message.username) : "",
+    content: message.content ? filter.clean(message.content) : "",
   }),
 
   preview: (text) => filter.clean(text),

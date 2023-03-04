@@ -124,10 +124,7 @@ export class AntiVirusCommand extends Subcommand {
     if (!filter)
       return interaction.editReply(`Invalid filter: ${filterName}...`);
 
-    await interaction.deferReply({
-      ephemeral: true,
-    });
-
+    await interaction.deferReply();
     const text = interaction.options.getString("text");
     const preview = await filter.preview(text || "");
     return interaction.editReply(preview);
