@@ -27,7 +27,6 @@ export const spanish: Filter = {
 
   run: async (message) => ({
     ...message,
-    username: message.username ? await spanishify(message.username) : "",
     content: message.content ? await spanishify(message.content) : "",
   }),
   preview: spanishify,
