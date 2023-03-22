@@ -36,7 +36,7 @@
     "env-var": "^7.3.0",
     "knex": "^2.4.0",
     "socks-proxy-agent": "^7.0.0",
-    "sqlite3": "^5.1.4",
+    "sqlite3": "^5.1.6",
     "uwuifier": "^4.0.5",
     "zalgo-js": "^1.0.0"
   },
