@@ -1,12 +1,12 @@
-import { isThreadChannel } from "@sapphire/discord.js-utilities";
-import type {
+import {
   ForumChannel,
   Message,
   NewsChannel,
+  StageChannel,
   TextChannel,
   ThreadChannel,
   VoiceChannel,
-  WebhookCreateMessageOptions,
+  WebhookMessageCreateOptions,
 } from "discord.js";
 
 export async function getCreateWebhook(
@@ -16,13 +16,15 @@ export async function getCreateWebhook(
     | NewsChannel
     | ForumChannel
     | ThreadChannel
+    | StageChannel
 ) {
   const textChannel:
     | TextChannel
     | VoiceChannel
     | NewsChannel
     | ForumChannel
-    | ThreadChannel = isThreadChannel(channel) ? channel.parent! : channel;
+    | StageChannel =
+    channel instanceof ThreadChannel ? channel.parent! : channel;
 
   const webhooks = await textChannel.fetchWebhooks();
   const foundWebhook = webhooks.find((wh) => wh.token);
@@ -37,7 +39,7 @@ export async function getCreateWebhook(
 
 export function messageToWebhookOptions(
   message: Message
-): WebhookCreateMessageOptions {
+): WebhookMessageCreateOptions {
   const { channel, content, author, member, attachments, tts } = message;
 
   const avatarURL = member?.displayAvatarURL() || author.avatarURL() || "";

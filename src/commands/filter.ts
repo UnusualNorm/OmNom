@@ -64,6 +64,24 @@ export class AntiVirusCommand extends Subcommand {
           )
           .addSubcommand((builder) =>
             builder
+              .setName("applyChannel")
+              .setDescription("Apply a filter to a channel!")
+              .addStringOption((builder) =>
+                builder
+                  .setName("filter")
+                  .setRequired(true)
+                  .setAutocomplete(true)
+                  .setDescription("The filter to apply to the channel.")
+              )
+              .addChannelOption((builder) =>
+                builder
+                  .setName("channel")
+                  .setRequired(true)
+                  .setDescription("The channel to apply the filter to.")
+              )
+          )
+          .addSubcommand((builder) =>
+            builder
               .setName("remove")
               .setDescription("Remove the filter from a target!")
               .addMentionableOption((builder) =>
@@ -71,6 +89,17 @@ export class AntiVirusCommand extends Subcommand {
                   .setName("target")
                   .setRequired(true)
                   .setDescription("The target to remove the filter from.")
+              )
+          )
+          .addSubcommand((builder) =>
+            builder
+              .setName("removeChannel")
+              .setDescription("Remove the filter from a channel!")
+              .addMentionableOption((builder) =>
+                builder
+                  .setName("channel")
+                  .setRequired(true)
+                  .setDescription("The channel to remove the filter from.")
               )
           )
           .addSubcommand((builder) =>

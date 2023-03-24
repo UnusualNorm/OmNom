@@ -1,4 +1,4 @@
-import type { WebhookCreateMessageOptions } from "discord.js";
+import type { WebhookMessageCreateOptions } from "discord.js";
 
 export interface Filter {
   friendlyName: string;
@@ -6,8 +6,8 @@ export interface Filter {
   description: string;
 
   run(
-    message: WebhookCreateMessageOptions
-  ): WebhookCreateMessageOptions | Promise<WebhookCreateMessageOptions>;
+    message: WebhookMessageCreateOptions
+  ): WebhookMessageCreateOptions | Promise<WebhookMessageCreateOptions>;
 
   preview(text: string): string | Promise<string>;
 }
