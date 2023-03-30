@@ -4,10 +4,15 @@ import { Subcommand } from "@sapphire/plugin-subcommands";
 import {
   AutocompleteInteraction,
   ChatInputCommandInteraction,
+  ForumChannel,
   GuildMember,
+  NewsChannel,
   PermissionFlagsBits,
   Role,
+  StageChannel,
+  TextChannel,
   User,
+  VoiceChannel,
 } from "discord.js";
 
 import type { Filter } from "../types/filter";
@@ -58,26 +63,9 @@ export class AntiVirusCommand extends Subcommand {
               .addMentionableOption((builder) =>
                 builder
                   .setName("target")
-                  .setRequired(true)
-                  .setDescription("The target to apply the filter to.")
-              )
-          )
-          .addSubcommand((builder) =>
-            builder
-              .setName("applyChannel")
-              .setDescription("Apply a filter to a channel!")
-              .addStringOption((builder) =>
-                builder
-                  .setName("filter")
-                  .setRequired(true)
-                  .setAutocomplete(true)
-                  .setDescription("The filter to apply to the channel.")
-              )
-              .addChannelOption((builder) =>
-                builder
-                  .setName("channel")
-                  .setRequired(true)
-                  .setDescription("The channel to apply the filter to.")
+                  .setDescription(
+                    "The target to apply the filter to. Leave blank to use the current channel."
+                  )
               )
           )
           .addSubcommand((builder) =>
@@ -87,19 +75,9 @@ export class AntiVirusCommand extends Subcommand {
               .addMentionableOption((builder) =>
                 builder
                   .setName("target")
-                  .setRequired(true)
-                  .setDescription("The target to remove the filter from.")
-              )
-          )
-          .addSubcommand((builder) =>
-            builder
-              .setName("removeChannel")
-              .setDescription("Remove the filter from a channel!")
-              .addMentionableOption((builder) =>
-                builder
-                  .setName("channel")
-                  .setRequired(true)
-                  .setDescription("The channel to remove the filter from.")
+                  .setDescription(
+                    "The target to remove the filter from. Leave blank to use the current channel."
+                  )
               )
           )
           .addSubcommand((builder) =>
@@ -207,12 +185,21 @@ export class AntiVirusCommand extends Subcommand {
         ephemeral: true,
       });
 
-    // TODO: Figure out how to allow for channel/guild targets also.
-    const target = interaction.options.getMentionable("target");
-    let targetType: "role" | "user";
+    const target =
+      interaction.options.getMentionable("target") ?? interaction.channel;
+
+    let targetType: "role" | "user" | "channel";
     if (target instanceof Role) targetType = "role";
     else if (target instanceof User || target instanceof GuildMember)
       targetType = "user";
+    else if (
+      target instanceof NewsChannel ||
+      target instanceof StageChannel ||
+      target instanceof TextChannel ||
+      target instanceof VoiceChannel ||
+      target instanceof ForumChannel
+    )
+      targetType = "channel";
     else
       return interaction.reply({
         content: "Please supply a valid target...",
@@ -239,7 +226,7 @@ export class AntiVirusCommand extends Subcommand {
 
     return interaction.editReply(
       `Applied filter "${filterName}" to <@${
-        target instanceof Role ? "&" : ""
+        targetType == "role" ? "&" : targetType == "channel" ? "#" : ""
       }${target.id}>`
     );
   }
@@ -251,12 +238,21 @@ export class AntiVirusCommand extends Subcommand {
         ephemeral: true,
       });
 
-    // TODO: Figure out how to allow for channel/guild targets also.
-    const target = interaction.options.getMentionable("target");
-    let targetType: "role" | "user";
+    const target =
+      interaction.options.getMentionable("target") ?? interaction.channel;
+
+    let targetType: "role" | "user" | "channel";
     if (target instanceof Role) targetType = "role";
     else if (target instanceof User || target instanceof GuildMember)
       targetType = "user";
+    else if (
+      target instanceof NewsChannel ||
+      target instanceof StageChannel ||
+      target instanceof TextChannel ||
+      target instanceof VoiceChannel ||
+      target instanceof ForumChannel
+    )
+      targetType = "channel";
     else
       return interaction.reply({
         content: "Please supply a valid target...",
@@ -275,9 +271,9 @@ export class AntiVirusCommand extends Subcommand {
       .where("type", targetType);
 
     return interaction.editReply(
-      `Removed all filters from <@${target instanceof Role ? "&" : ""}${
-        target.id
-      }>`
+      `Removed all filters from <@${
+        targetType == "role" ? "&" : targetType == "channel" ? "#" : ""
+      }${target.id}>`
     );
   }
 }

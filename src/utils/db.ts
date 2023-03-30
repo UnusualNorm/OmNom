@@ -29,4 +29,13 @@ if (!(await db.schema.hasTable("filters")))
     table.string("filter");
   });
 
+if (!(await db.schema.hasTable("chatbots")))
+  await db.schema.createTable("chatbots", (table) => {
+    table.string("id");
+    table.string("name");
+    table.string("avatar");
+    table.string("persona");
+    table.string("keywords");
+  });
+
 export default db;
