@@ -47,7 +47,7 @@ if (!(await db.schema.hasTable("filters")))
 
 if (!(await db.schema.hasTable("chatbots")))
   await db.schema.createTable("chatbots", (table) => {
-    table.string("id");
+    table.string("id").unique();
     table.string("name");
     table.string("avatar");
     table.string("persona");
@@ -57,7 +57,7 @@ if (!(await db.schema.hasTable("chatbots")))
 
 if (!(await db.schema.hasTable("global_chatbots")))
   await db.schema.createTable("global_chatbots", (table) => {
-    table.string("id");
+    table.string("id").unique();
     table.boolean("enabled");
   });
 

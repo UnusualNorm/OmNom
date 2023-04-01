@@ -263,11 +263,15 @@ export class AntiVirusCommand extends Subcommand {
       ephemeral: true,
     });
 
-    // Update the global chatbot.
+    // Update the global chatbot. Insert if it doesn't exist.
     await this.container.client
       .db("global_chatbots")
-      .update("enabled", enabled)
-      .where("id", interaction.guildId);
+      .insert({
+        id: interaction.guildId,
+        enabled,
+      })
+      .onConflict("id")
+      .merge();
 
     // Send a confirmation message.
     await interaction.editReply({

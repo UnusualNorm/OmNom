@@ -130,7 +130,7 @@ export class ChatbotListener extends Listener {
     )
       return message.react("👍");
 
-    // Do not run if the message is from a webhook or a bot
+    // Do not run if the message is from a webhook or the bot
     if (
       message.webhookId ||
       message.author.id == this.container.client.user?.id
@@ -144,15 +144,7 @@ export class ChatbotListener extends Listener {
       .where("id", message.channel.id)
       .first();
 
-    if (!chatbotConfig && !message.channel.isDMBased()) {
-      const globalChatbot = await this.container.client
-        .db("global_chatbots")
-        .select()
-        .where("id", message.channel.guildId)
-        .first();
-      if (!globalChatbot?.enabled) return;
-    }
-
+    // Get the chatbot's configs, with defaults
     const chatbotName =
       chatbotConfig?.name || this.container.client.user?.username || "Robot";
     const chatbotAvatar = chatbotConfig?.avatar;
@@ -162,7 +154,7 @@ export class ChatbotListener extends Listener {
     const chatbotPersona = chatbotConfig?.persona ?? env.CHATBOT_PERSONA;
     const chatbotHello = chatbotConfig?.hello ?? env.CHATBOT_HELLO;
 
-    // Determine if we need to use webhooks
+    // Determine if we need to use webhooks (if we need to change the name or avatar)
     const useWebhooks =
       message.inGuild() && (!!chatbotConfig?.name || !!chatbotConfig?.avatar);
 
@@ -181,44 +173,46 @@ export class ChatbotListener extends Listener {
     )
       return;
 
-    // Create a regex for the keywords, and check if the message contains them
-    // This should support wildcards
-    const keywordsRegex = new RegExp(
-      chabotKeywords.map((keyword) => keyword.replace("*", "\\S*")).join("|"),
-      "i"
-    );
-
-    // Do not run if the message is sent by us,
-    // Unless we are currently generating a message
-    if (
-      (message.author.id == this.container.client.user?.id ||
-        message.webhookId) &&
-      !jobRequestCancels.has(message.channel.id)
-    )
-      return;
-
+    // Get message reference (reply)
     const reference = message.reference ? await message.fetchReference() : null;
 
+    // If we should run with the global chatbot, and we're not in a DM, check if the message mentions us
     if (
-      // If we are currently generating a message, we ignore all below rules,
-      // Otherwise we would get desynced messages
-      !(
-        jobRequestCancels.has(message.channel.id) ||
-        (useWebhooks
-          ? // If we are using webhooks, we run if the content contains a keyword
-            keywordsRegex.test(message.content) ||
-            // Or if the message is a reply to a message sent by a webhook with the same name
-            (reference?.webhookId &&
-              reference.author.username == chatbotConfig?.name)
-          : chatbotConfig ||
-            // Always run if the message is a DM
-            message.channel.type == ChannelType.DM ||
-            // Guild messages must be manually triggered with a mention or reference
-            message.mentions.has(this.container.client.user?.id || "") ||
-            reference?.author.id == this.container.client.user?.id)
+      !jobRequestCancels.has(message.channel.id) &&
+      !chatbotConfig &&
+      !message.channel.isDMBased()
+    ) {
+      const globalChatbot = await this.container.client
+        .db("global_chatbots")
+        .select()
+        .where("id", message.channel.guildId)
+        .first();
+
+      // If the global chatbot is not enabled, stop
+      if (!globalChatbot?.enabled) return;
+
+      // If we have not been mentioned, stop
+      if (
+        !message.mentions.has(this.container.client.user?.id || "") &&
+        reference?.author.id != this.container.client.user?.id
       )
-    )
-      return;
+        return;
+    }
+
+    // If we're a webhook, and the bot isn't directly messaged, check if the message includes keywords
+    if (
+      !jobRequestCancels.has(message.channel.id) &&
+      useWebhooks &&
+      !(reference?.webhookId && reference.author.username == chatbotName)
+    ) {
+      const keywordsRegex = new RegExp(
+        chabotKeywords.map((keyword) => keyword.replace("*", "\\S*")).join("|"),
+        "i"
+      );
+
+      // If the message does not include keywords, stop
+      if (!keywordsRegex.test(message.content)) return;
+    }
 
     // Start typing
     await message.channel.sendTyping();
@@ -243,7 +237,7 @@ export class ChatbotListener extends Listener {
 
     // Filter the messages that our bot should not remember
     messages = messages.filter(
-      (m) => m.createdAt.getTime() >= Date.now() - memoryTimeLimit
+      (m) => Date.now() - m.createdAt.getTime() >= memoryTimeLimit
     );
 
     // createPrompt expects the most recent message to be last,
