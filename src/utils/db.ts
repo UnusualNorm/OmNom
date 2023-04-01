@@ -22,10 +22,16 @@ declare module "knex/types/tables" {
     enabled: boolean;
   }
 
+  interface ImageSafety {
+    id: string;
+    safe: boolean;
+  }
+
   interface Tables {
     filters: Filter;
     chatbots: Chatbot;
     global_chatbots: GlobalChatbot;
+    image_safety: ImageSafety;
   }
 }
 
@@ -59,6 +65,12 @@ if (!(await db.schema.hasTable("global_chatbots")))
   await db.schema.createTable("global_chatbots", (table) => {
     table.string("id").unique();
     table.boolean("enabled");
+  });
+
+if (!(await db.schema.hasTable("image_safety")))
+  await db.schema.createTable("image_safety", (table) => {
+    table.string("id").unique();
+    table.boolean("safe");
   });
 
 export default db;
