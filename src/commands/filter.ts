@@ -40,7 +40,7 @@ const filters = Object.values(rawFilters) as Filter[];
     },
   ],
 })
-export class AntiVirusCommand extends Subcommand {
+export class FilterCommand extends Subcommand {
   override registerApplicationCommands(registry: Command.Registry) {
     registry.registerChatInputCommand(
       (builder) =>
