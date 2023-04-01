@@ -127,8 +127,10 @@ export class ChatbotListener extends Listener {
         message.channel
           .permissionsFor(this.container.client.user?.id || "")
           ?.has(PermissionFlagsBits.AddReactions))
-    )
+    ) {
+      jobRequestCancels.get(message.channel.id)?.();
       return message.react("👍");
+    }
 
     // Do not run if the message is from a webhook or the bot
     if (
