@@ -250,6 +250,14 @@ export class AntiVirusCommand extends Subcommand {
   async global(interaction: ChatInputCommandInteraction) {
     const enabled = interaction.options.getBoolean("enabled", true);
 
+    if (!interaction.inGuild()) {
+      await interaction.reply({
+        content: `This command can only be used in a guild!`,
+        ephemeral: true,
+      });
+      return;
+    }
+
     // Maybe our db connection is slow, defer the interaction.
     await interaction.deferReply({
       ephemeral: true,
@@ -259,7 +267,7 @@ export class AntiVirusCommand extends Subcommand {
     await this.container.client
       .db("global_chatbots")
       .update("enabled", enabled)
-      .where("id", "global");
+      .where("id", interaction.guildId);
 
     // Send a confirmation message.
     await interaction.editReply({

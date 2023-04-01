@@ -4,7 +4,7 @@ import env from "env-var";
 export default {
   DISCORD_TOKEN: env.get("DISCORD_TOKEN").required().asString(),
   TENOR_KEY: env.get("TENOR_KEY").asString(),
-  KOBOLD_KEY: env.get("KOBOLD_KEY").asString(),
+  KOBOLD_KEY: env.get("KOBOLD_KEY").asString() ?? "0000000000",
   CHATBOT_PERSONA:
     env.get("CHATBOT_PERSONA").asString() ?? "A friendly AI chatbot.",
   CHATBOT_HELLO:
