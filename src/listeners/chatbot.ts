@@ -95,9 +95,40 @@ export class ChatbotListener extends Listener {
     return prompt;
   }
 
+  private parseInput(message: string) {
+    // The AI likes to impersonate the user, remember to check for that
+    const lines = message.trim().split("\n");
+
+    // The first line is always the bot's response
+    const botLine = lines.splice(0, 1)[0]!;
+
+    // Get all lines that start with the bot's name
+    let foundImpersonation = false;
+    const botLines = lines
+      .filter((line) => {
+        if (foundImpersonation) return false;
+        if (line.startsWith(`${this.name}: `)) return true;
+        foundImpersonation = true;
+        return false;
+      })
+      .map((line) => line.replace(`${this.name}: `, "").trim());
+
+    return [botLine, ...botLines];
+  }
+
   public async run(message: Message) {
     // Do not run if the message is in a thread without a parent
     if (message.channel.isThread() && !message.channel.parent) return;
+
+    // If the message is the limiter, react to it
+    if (
+      message.content == env.CHATBOT_LIMITER &&
+      (message.channel.type == ChannelType.DM ||
+        message.channel
+          .permissionsFor(this.container.client.user?.id || "")
+          ?.has(PermissionFlagsBits.AddReactions))
+    )
+      return message.react("👍");
 
     // Do not run if the message is from a webhook or a bot
     if (
@@ -112,6 +143,15 @@ export class ChatbotListener extends Listener {
       .select()
       .where("id", message.channel.id)
       .first();
+
+    if (!chatbotConfig && !message.channel.isDMBased()) {
+      const globalChatbot = await this.container.client
+        .db("global_chatbots")
+        .select()
+        .where("id", message.channel.guildId)
+        .first();
+      if (!globalChatbot?.enabled) return;
+    }
 
     const chatbotName =
       chatbotConfig?.name || this.container.client.user?.username || "Robot";
@@ -170,8 +210,7 @@ export class ChatbotListener extends Listener {
             // Or if the message is a reply to a message sent by a webhook with the same name
             (reference?.webhookId &&
               reference.author.username == chatbotConfig?.name)
-          : // Run if we've found a config, they've explicitly enabled it
-            chatbotConfig ||
+          : chatbotConfig ||
             // Always run if the message is a DM
             message.channel.type == ChannelType.DM ||
             // Guild messages must be manually triggered with a mention or reference
@@ -182,10 +221,7 @@ export class ChatbotListener extends Listener {
       return;
 
     // Start typing
-    const typingInterval = setInterval(
-      () => message.channel.sendTyping(),
-      5000
-    );
+    await message.channel.sendTyping();
 
     // If we have a cache at or over our size limit, use that
     let messages: Message[];
@@ -207,12 +243,18 @@ export class ChatbotListener extends Listener {
 
     // Filter the messages that our bot should not remember
     messages = messages.filter(
-      (m) => m.createdAt.getTime() > Date.now() - memoryTimeLimit
+      (m) => m.createdAt.getTime() >= Date.now() - memoryTimeLimit
     );
 
     // createPrompt expects the most recent message to be last,
     // Currently the messages are in reverse order
     messages = messages.reverse();
+
+    // If any messages are the limiter, we need to remove all previous messages
+    const limiterIndex = messages.findIndex(
+      (m) => m.content == env.CHATBOT_LIMITER
+    );
+    if (limiterIndex != -1) messages = messages.slice(limiterIndex + 1);
 
     // Construct the prompt
     const prompt = await this.createPrompt(
@@ -221,6 +263,8 @@ export class ChatbotListener extends Listener {
       chatbotHello,
       messages
     );
+
+    console.log(prompt);
 
     // Cancel the current job if it exists
     jobRequestCancels.get(message.channel.id)?.();
@@ -234,7 +278,6 @@ export class ChatbotListener extends Listener {
 
     // Cancel the job if we received a cancel request
     if (cancelled) {
-      clearInterval(typingInterval);
       await horde.cancelJob(jobId);
       return;
     }
@@ -242,7 +285,6 @@ export class ChatbotListener extends Listener {
     // Now that the job is created, we can make the cancel function cancel the job
     jobRequestCancels.set(message.channel.id, () => {
       cancelled = true;
-      clearInterval(typingInterval);
       horde.cancelJob(jobId);
     });
 
@@ -251,6 +293,9 @@ export class ChatbotListener extends Listener {
     while (!job?.done) {
       // Wait a bit before checking again
       await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      // Continue typing
+      await message.channel.sendTyping();
 
       // Return if we received a cancel request
       if (cancelled) return;
@@ -262,16 +307,14 @@ export class ChatbotListener extends Listener {
       if (!job.is_possible || job.faulted) return;
     }
 
-    // Stop typing
-    clearInterval(typingInterval);
-
     // Delete the cancel function if we finished without a cancel request
     if (!cancelled) jobRequestCancels.delete(message.channel.id);
 
-    if (useWebhooks) {
-      // Send the response
-      let threadId: string | undefined;
-      let webhook: Webhook | undefined;
+    const botMessages = this.parseInput(job.generations[0]?.text || "...");
+
+    let threadId: string | undefined;
+    let webhook: Webhook | undefined;
+    if (useWebhooks)
       if (message.channel.isThread()) {
         threadId = message.channel.id;
         // I don't know if this is just a type error, but maybe it is possible to have a thread without a parent?
@@ -279,17 +322,20 @@ export class ChatbotListener extends Listener {
         webhook = await getCreateWebhook(message.channel.parent!);
       } else webhook = await getCreateWebhook(message.channel);
 
-      // Send the message
-      await webhook?.send({
-        username: chatbotName,
-        avatarURL: chatbotAvatar,
-        allowedMentions: {
-          parse: [],
-        },
-        content: job.generations[0]?.text || "...",
-        threadId,
-      });
-    } else await message.channel.send(job.generations[0]?.text || "...");
+    // Send the messages
+    for (const botMessage of botMessages)
+      if (useWebhooks)
+        await webhook?.send({
+          username: chatbotName,
+          avatarURL: chatbotAvatar,
+          allowedMentions: {
+            parse: [],
+          },
+          content: botMessage,
+          threadId,
+        });
+      else await message.channel.send(botMessage);
+
     return;
   }
 }

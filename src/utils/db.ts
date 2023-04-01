@@ -17,9 +17,15 @@ declare module "knex/types/tables" {
     keywords?: string;
   }
 
+  interface GlobalChatbot {
+    id: string;
+    enabled: boolean;
+  }
+
   interface Tables {
     filters: Filter;
     chatbots: Chatbot;
+    global_chatbots: GlobalChatbot;
   }
 }
 
@@ -47,6 +53,12 @@ if (!(await db.schema.hasTable("chatbots")))
     table.string("persona");
     table.string("hello");
     table.string("keywords");
+  });
+
+if (!(await db.schema.hasTable("global_chatbots")))
+  await db.schema.createTable("global_chatbots", (table) => {
+    table.string("id");
+    table.boolean("enabled");
   });
 
 export default db;

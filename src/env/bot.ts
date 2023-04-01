@@ -14,5 +14,7 @@ export default {
   CHATBOT_LIMIT: env.get("CHATBOT_LIMIT").asIntPositive() ?? Infinity,
   // A comma separated list of models to use
   CHATBOT_MODELS:
-    env.get("CHATBOT_MODELS").asString() ?? "PygmalionAI/pygmalion-6b",
+    env.get("CHATBOT_MODELS").asString() ??
+    "PygmalionAI/pygmalion-6b,Alpaca-30B-Int4",
+  CHATBOT_LIMITER: env.get("CHATBOT_LIMITER").asString() ?? "<CLEAR>",
 };

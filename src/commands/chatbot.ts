@@ -19,10 +19,6 @@ import { Subcommand } from "@sapphire/plugin-subcommands";
       chatInputRun: "delete",
     },
     {
-      name: "trigger",
-      chatInputRun: "trigger",
-    },
-    {
       name: "global",
       chatInputRun: "global",
     },
@@ -114,13 +110,6 @@ export class AntiVirusCommand extends Subcommand {
             builder
               .setName("delete")
               .setDescription("Delete the chatbot for this channel!")
-          )
-          .addSubcommand((builder) =>
-            builder
-              .setName("trigger")
-              .setDescription(
-                "Make the chatbot write a message in this channel!"
-              )
           )
           .addSubcommand((builder) =>
             builder
@@ -254,6 +243,29 @@ export class AntiVirusCommand extends Subcommand {
     // Send a confirmation message.
     await interaction.editReply({
       content: `Successfully deleted the chatbot for this channel!`,
+    });
+    return;
+  }
+
+  async global(interaction: ChatInputCommandInteraction) {
+    const enabled = interaction.options.getBoolean("enabled", true);
+
+    // Maybe our db connection is slow, defer the interaction.
+    await interaction.deferReply({
+      ephemeral: true,
+    });
+
+    // Update the global chatbot.
+    await this.container.client
+      .db("global_chatbots")
+      .update("enabled", enabled)
+      .where("id", "global");
+
+    // Send a confirmation message.
+    await interaction.editReply({
+      content: `Successfully ${
+        enabled ? "enabled" : "disabled"
+      } the global chatbot!`,
     });
     return;
   }
