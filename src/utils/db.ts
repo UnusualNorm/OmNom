@@ -8,8 +8,18 @@ declare module "knex/types/tables" {
     filter: string;
   }
 
+  interface Chatbot {
+    id: string;
+    name?: string;
+    avatar?: string;
+    persona?: string;
+    hello?: string;
+    keywords?: string;
+  }
+
   interface Tables {
     filters: Filter;
+    chatbots: Chatbot;
   }
 }
 
@@ -27,6 +37,16 @@ if (!(await db.schema.hasTable("filters")))
     table.string("type");
     table.string("guild");
     table.string("filter");
+  });
+
+if (!(await db.schema.hasTable("chatbots")))
+  await db.schema.createTable("chatbots", (table) => {
+    table.string("id");
+    table.string("name");
+    table.string("avatar");
+    table.string("persona");
+    table.string("hello");
+    table.string("keywords");
   });
 
 export default db;

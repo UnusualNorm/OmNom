@@ -18,15 +18,7 @@ const client = new SapphireClient({
     GatewayIntentBits.DirectMessageReactions,
     GatewayIntentBits.MessageContent,
   ],
-  partials: [
-    Partials.Channel,
-    Partials.GuildMember,
-    Partials.GuildScheduledEvent,
-    Partials.Message,
-    Partials.Reaction,
-    Partials.ThreadMember,
-    Partials.User,
-  ],
+  partials: [Partials.Reaction],
   shards: clientInitData?.SHARD_LIST,
   shardCount: clientInitData?.TOTAL_SHARDS,
 });

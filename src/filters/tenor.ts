@@ -1,5 +1,6 @@
-import type { Filter } from "../types/filter";
-const apiKey = process.env["TENOR_APIKEY"] || "LIVDSRZULELA";
+import type { Filter } from "../types/filter.js";
+import env from "../env/bot.js";
+const apiKey = env.TENOR_KEY || "LIVDSRZULELA";
 
 type TenorSearchOutput = {
   results: {

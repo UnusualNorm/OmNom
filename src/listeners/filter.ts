@@ -1,14 +1,15 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Listener } from "@sapphire/framework";
-import { Message, PermissionFlagsBits } from "discord.js";
-
+import { Message, PermissionFlagsBits, Webhook } from "discord.js";
 import { getCreateWebhook, messageToWebhookOptions } from "../utils/webhook.js";
+import { getAppliedFilters } from "../utils/filter.js";
 
 import type { Filter } from "../types/filter.js";
 import * as rawFilters from "../filters/index.js";
-const filters = Object.values(rawFilters) as Filter[];
 
+const filters = Object.values(rawFilters) as Filter[];
 const filterOrder = ["user", "role", "channel", "guild"];
+const webhookCache = new Map<string, Webhook>();
 
 @ApplyOptions<Listener.Options>({
   name: "filter",
@@ -16,8 +17,8 @@ const filterOrder = ["user", "role", "channel", "guild"];
 })
 export class FilterListener extends Listener {
   public async run(message: Message) {
-    if (!message.inGuild()) return;
     if (
+      !message.inGuild() ||
       !message.channel
         .permissionsFor(this.container.client.user!.id)
         ?.has(PermissionFlagsBits.ManageWebhooks) ||
@@ -27,46 +28,26 @@ export class FilterListener extends Listener {
     )
       return;
 
-    const webhook = await getCreateWebhook(message.channel);
-    let filtersQuery = this.container.client
-      .db("filters")
-      .select()
-      .orWhere((builder) =>
-        builder
-          .where("id", message.guildId)
-          .where("guild", message.guildId)
-          .where("type", "guild")
-      )
-      .orWhere((builder) =>
-        builder
-          .where("id", message.channelId)
-          .where("guild", message.guildId)
-          .where("type", "channel")
-      )
-      .orWhere((builder) =>
-        builder
-          .where("id", message.author.id)
-          .where("guild", message.guildId)
-          .where("type", "user")
-      );
+    let webhook = webhookCache.get(message.channelId);
+    if (!webhook) {
+      webhook = await getCreateWebhook(message.channel);
+      webhookCache.set(message.channelId, webhook);
+    }
 
-    message.member?.roles.cache.forEach(
-      (role) =>
-        (filtersQuery = filtersQuery.orWhere((builder) =>
-          builder
-            .where("id", role.id)
-            .where("guild", message.guildId)
-            .where("type", "role")
-        ))
-    );
-
-    const filterNames = (await filtersQuery)
+    const filterNames = (
+      await getAppliedFilters(
+        message.guildId,
+        message.channelId,
+        message.author.id,
+        message.member?.roles.cache.map((role) => role.id)
+      )
+    )
       .sort((a, b) => filterOrder.indexOf(a.type) - filterOrder.indexOf(b.type))
       .map((filter) => filter.filter);
     if (filterNames.length == 0) return;
 
     let newMessage = messageToWebhookOptions(message);
-    for (const filterName of filterNames)
+    for (const filterName of [...new Set(filterNames)])
       newMessage =
         (await filters
           .find((filter) => filter.name == filterName)

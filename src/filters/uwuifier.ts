@@ -25,8 +25,10 @@ export const uwu: Filter = {
     username: message.username
       ? uwuifier.uwuifyWords(message.username)
       : "Onii-Chan",
-    content: message.content ? uwuifier.uwuifySentence(message.content) : "",
+    content: message.content
+      ? uwuifier.uwuifySentence(message.content).replaceAll("*", "\\*")
+      : "",
   }),
 
-  preview: (text) => uwuifier.uwuifySentence(text),
+  preview: (text) => uwuifier.uwuifySentence(text).replaceAll("*", "\\*"),
 };

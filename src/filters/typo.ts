@@ -5,7 +5,7 @@ function typoify(text: string) {
   for (let i = 0; i < words.length; i++) {
     let word = words[i]!;
     const typoChoice = Math.floor(
-      Math.random() * (1 + (word.length > 1 ? 1 : 0))
+      Math.random() * (0 + (word.length > 1 ? 2 : 0))
     );
 
     switch (typoChoice) {
