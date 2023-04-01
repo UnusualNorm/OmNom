@@ -28,7 +28,14 @@ export class ImageCommand extends Subcommand {
         });
 
       await interaction.deferReply();
-      const results = await gis(search, { safe: "on" });
+      const safetyConfig = await this.container.client
+        .db("image_safety")
+        .select()
+        .where("id", interaction.guildId)
+        .first();
+      const results = await gis(search, {
+        safe: safetyConfig?.safe ?? true ? "on" : "off",
+      });
       const randomResultI = Math.floor(Math.random() * results.length);
       const randomResult = results[randomResultI];
 
@@ -49,6 +56,39 @@ export class ImageCommand extends Subcommand {
     }
   }
 
+  public async safety(interaction: ChatInputCommandInteraction) {
+    const enabled = interaction.options.getBoolean("enabled", true);
+
+    if (!interaction.inGuild()) {
+      await interaction.reply({
+        content: `This command can only be used in a guild!`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    // Maybe our db connection is slow, defer the interaction.
+    await interaction.deferReply({
+      ephemeral: true,
+    });
+
+    // Update the global chatbot. Insert if it doesn't exist.
+    await this.container.client
+      .db("image_safety")
+      .insert({
+        id: interaction.guildId,
+        safe: enabled,
+      })
+      .onConflict("id")
+      .merge();
+
+    // Send a confirmation message.
+    await interaction.editReply({
+      content: `Successfully ${enabled ? "enabled" : "disabled"} safe search!`,
+    });
+    return;
+  }
+
   override registerApplicationCommands(registry: Subcommand.Registry) {
     registry.registerChatInputCommand(
       (builder) =>
@@ -63,6 +103,17 @@ export class ImageCommand extends Subcommand {
                 option
                   .setName("query")
                   .setDescription("The image query to search for!")
+                  .setRequired(true)
+              )
+          )
+          .addSubcommand((builder) =>
+            builder
+              .setName("safety")
+              .setDescription("Toggle safe search on Google!")
+              .addBooleanOption((option) =>
+                option
+                  .setName("enabled")
+                  .setDescription("Enable safe search.")
                   .setRequired(true)
               )
           ),
