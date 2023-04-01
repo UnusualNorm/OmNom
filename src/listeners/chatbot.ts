@@ -264,8 +264,6 @@ export class ChatbotListener extends Listener {
       messages
     );
 
-    console.log(prompt);
-
     // Cancel the current job if it exists
     jobRequestCancels.get(message.channel.id)?.();
 
