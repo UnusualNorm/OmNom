@@ -7,3 +7,4 @@ export * from "./translate.js";
 export * from "./typo.js";
 export * from "./uwuifier.js";
 export * from "./zalgo.js";
+export * from "./pokemon.js";
