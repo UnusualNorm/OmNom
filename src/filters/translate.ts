@@ -29,5 +29,5 @@ export const spanish: Filter = {
     ...message,
     content: message.content ? await spanishify(message.content) : "",
   }),
-  preview: spanishify,
+  preview: (text: string) => spanishify(text),
 };

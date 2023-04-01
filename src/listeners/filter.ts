@@ -1,6 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Listener } from "@sapphire/framework";
-import { Message, PermissionFlagsBits, Webhook } from "discord.js";
+import { Message, PermissionFlagsBits } from "discord.js";
 import { getCreateWebhook, messageToWebhookOptions } from "../utils/webhook.js";
 import { getAppliedFilters } from "../utils/filter.js";
 
@@ -9,7 +9,6 @@ import * as rawFilters from "../filters/index.js";
 
 const filters = Object.values(rawFilters) as Filter[];
 const filterOrder = ["user", "role", "channel", "guild"];
-const webhookCache = new Map<string, Webhook>();
 
 @ApplyOptions<Listener.Options>({
   name: "filter",
@@ -28,11 +27,7 @@ export class FilterListener extends Listener {
     )
       return;
 
-    let webhook = webhookCache.get(message.channelId);
-    if (!webhook) {
-      webhook = await getCreateWebhook(message.channel);
-      webhookCache.set(message.channelId, webhook);
-    }
+    const webhook = await getCreateWebhook(message.channel);
 
     const filterNames = (
       await getAppliedFilters(
