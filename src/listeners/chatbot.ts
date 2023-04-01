@@ -1,8 +1,9 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Listener } from "@sapphire/framework";
-import { ChannelType, Message, PermissionFlagsBits } from "discord.js";
+import { ChannelType, Message, PermissionFlagsBits, Webhook } from "discord.js";
 import env from "../env/bot.js";
 import { JobStatusResponse, KoboldAIHorde } from "../utils/kobold.js";
+import { getCreateWebhook } from "../utils/webhook.js";
 
 const models = env.CHATBOT_MODELS.split(",");
 const memoryTimeLimit = env.CHATBOT_MEMORY * 60000;
@@ -49,11 +50,8 @@ export class ChatbotListener extends Listener {
         // Make all user mentions @User instead of <@id>
         async (...args) => {
           const id = args[1] as string;
-          // If the user is in the cache, return their username
-          if (this.container.client.users.cache.has(id))
-            return `@${this.container.client.users.cache.get(id)?.username}`;
 
-          // If the user is not in the cache, fetch them
+          // Fetch the user
           const user = await this.container.client.users.fetch(id);
 
           // If the user is not found, return a generic @
@@ -68,23 +66,24 @@ export class ChatbotListener extends Listener {
     );
   }
 
-  async createPrompt(memory: Message[]) {
-    const name = this.container.client.user?.username;
+  async createPrompt(
+    name: string,
+    persona: string,
+    hello: string,
+    memory: Message[]
+  ) {
     const helloName = memory.find((message) => message.author.username !== name)
       ?.author.username;
 
     // If we have a persona, add it to the prompt
-    let prompt = env.CHATBOT_PERSONA
-      ? `${name}'s Persona: ${env.CHATBOT_PERSONA}\n`
-      : "";
+    let prompt = persona ? `${name}'s Persona: ${persona}\n` : "";
 
     // The docs say to add this as a delimiter
     prompt += "<START>\n";
 
     // If we have a hello message, add it to the prompt
-    !env.CHATBOT_HELLO ||
-      (prompt += `${helloName || "User"}: Hello ${name}!\n`);
-    !env.CHATBOT_HELLO || (prompt += `${name}: ${env.CHATBOT_HELLO}\n`);
+    !hello || (prompt += `${helloName || "User"}: Hello ${name}!\n`);
+    !hello || (prompt += `${name}: ${hello}\n`);
 
     // Add all the messages in the memory to the prompt
     prompt += memory
@@ -97,6 +96,9 @@ export class ChatbotListener extends Listener {
   }
 
   public async run(message: Message) {
+    // Do not run if the message is in a thread without a parent
+    if (message.channel.isThread() && !message.channel.parent) return;
+
     // Do not run if the message is from a webhook or a bot
     if (
       message.webhookId ||
@@ -104,39 +106,78 @@ export class ChatbotListener extends Listener {
     )
       return;
 
-    // Do not run if the bot does not have the required permissions
+    // Get the chatbot config for this channel
+    const chatbotConfig = await this.container.client
+      .db("chatbots")
+      .select()
+      .where("id", message.channel.id)
+      .first();
+
+    const chatbotName =
+      chatbotConfig?.name || this.container.client.user?.username || "Robot";
+    const chatbotAvatar = chatbotConfig?.avatar;
+    const chabotKeywords = [chatbotName].concat(
+      chatbotConfig?.keywords?.split(",") ?? []
+    );
+    const chatbotPersona = chatbotConfig?.persona ?? env.CHATBOT_PERSONA;
+    const chatbotHello = chatbotConfig?.hello ?? env.CHATBOT_HELLO;
+
+    // Determine if we need to use webhooks
+    const useWebhooks =
+      message.inGuild() && (!!chatbotConfig?.name || !!chatbotConfig?.avatar);
+
+    // Do not run if the bot does not have the required permissions, we do not need to worry if we're in a DM
     if (
-      message.inGuild() &&
-      (!message.channel
-        .permissionsFor(this.container.client.user!.id)
-        ?.has(PermissionFlagsBits.SendMessages) ||
-        !message.channel
-          .permissionsFor(this.container.client.user!.id)
-          ?.has(PermissionFlagsBits.ReadMessageHistory))
+      message.channel.type != ChannelType.DM &&
+      !message.channel
+        .permissionsFor(this.container.client.user?.id || "")
+        ?.has(
+          [
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ReadMessageHistory,
+            // We also need ManageWebhooks if we are using webhooks
+          ].concat(useWebhooks ? PermissionFlagsBits.ManageWebhooks : [])
+        )
     )
       return;
+
+    // Create a regex for the keywords, and check if the message contains them
+    // This should support wildcards
+    const keywordsRegex = new RegExp(
+      chabotKeywords.map((keyword) => keyword.replace("*", "\\S*")).join("|"),
+      "i"
+    );
 
     // Do not run if the message is sent by us,
     // Unless we are currently generating a message
     if (
-      message.author.id == this.container.client.user?.id &&
+      (message.author.id == this.container.client.user?.id ||
+        message.webhookId) &&
       !jobRequestCancels.has(message.channel.id)
     )
       return;
 
     const reference = message.reference ? await message.fetchReference() : null;
 
-    // Do not run if we are not in a DM, and the message does not mention the bot
-    // This allows dm messages to be processed automatically
-    // While guild messages must be manually triggered with a mention
-
-    // If we are currently generating a message, we ignore all above rules,
-    // Otherwise we would get desynced messages
     if (
-      message.channel.type != ChannelType.DM &&
-      !message.content.includes(`<@${this.container.client.id}>`) &&
-      !(reference?.author.id == this.container.client.user!.id) &&
-      jobRequestCancels.has(message.channel.id)
+      // If we are currently generating a message, we ignore all below rules,
+      // Otherwise we would get desynced messages
+      !(
+        jobRequestCancels.has(message.channel.id) ||
+        (useWebhooks
+          ? // If we are using webhooks, we run if the content contains a keyword
+            keywordsRegex.test(message.content) ||
+            // Or if the message is a reply to a message sent by a webhook with the same name
+            (reference?.webhookId &&
+              reference.author.username == chatbotConfig?.name)
+          : // Run if we've found a config, they've explicitly enabled it
+            chatbotConfig ||
+            // Always run if the message is a DM
+            message.channel.type == ChannelType.DM ||
+            // Guild messages must be manually triggered with a mention or reference
+            message.mentions.has(this.container.client.user?.id || "") ||
+            reference?.author.id == this.container.client.user?.id)
+      )
     )
       return;
 
@@ -174,7 +215,12 @@ export class ChatbotListener extends Listener {
     messages = messages.reverse();
 
     // Construct the prompt
-    const prompt = await this.createPrompt(messages);
+    const prompt = await this.createPrompt(
+      chatbotName,
+      chatbotPersona,
+      chatbotHello,
+      messages
+    );
 
     // Cancel the current job if it exists
     jobRequestCancels.get(message.channel.id)?.();
@@ -219,11 +265,31 @@ export class ChatbotListener extends Listener {
     // Stop typing
     clearInterval(typingInterval);
 
-    // Send the response
-    message.channel.send(job.generations[0]?.text || "...");
-
     // Delete the cancel function if we finished without a cancel request
     if (!cancelled) jobRequestCancels.delete(message.channel.id);
+
+    if (useWebhooks) {
+      // Send the response
+      let threadId: string | undefined;
+      let webhook: Webhook | undefined;
+      if (message.channel.isThread()) {
+        threadId = message.channel.id;
+        // I don't know if this is just a type error, but maybe it is possible to have a thread without a parent?
+        // Whatever, I separated that check at the beginning so I don't waste my time.
+        webhook = await getCreateWebhook(message.channel.parent!);
+      } else webhook = await getCreateWebhook(message.channel);
+
+      // Send the message
+      await webhook?.send({
+        username: chatbotName,
+        avatarURL: chatbotAvatar,
+        allowedMentions: {
+          parse: [],
+        },
+        content: job.generations[0]?.text || "...",
+        threadId,
+      });
+    } else await message.channel.send(job.generations[0]?.text || "...");
     return;
   }
 }
