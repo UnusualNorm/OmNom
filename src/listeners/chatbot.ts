@@ -239,7 +239,7 @@ export class ChatbotListener extends Listener {
 
     // Filter the messages that our bot should not remember
     messages = messages.filter(
-      (m) => Date.now() - m.createdAt.getTime() >= memoryTimeLimit
+      (m) => Date.now() - m.createdAt.getTime() <= memoryTimeLimit
     );
 
     // createPrompt expects the most recent message to be last,
