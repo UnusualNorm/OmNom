@@ -31,7 +31,7 @@
     "discord-api-types": "^0.37.36",
     "discord-cross-hosting": "^2.3.2",
     "discord-hybrid-sharding": "^2.1.1",
-    "discord.js": "^14.8.0",
+    "discord.js": "^14.9.0",
     "dotenv": "^16.0.3",
     "emoji-regex": "^10.2.1",
     "env-var": "^7.3.0",
