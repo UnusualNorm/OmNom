@@ -208,7 +208,9 @@ export class ChatbotListener extends Listener {
       !(reference?.webhookId && reference.author.username == chatbotName)
     ) {
       const keywordsRegex = new RegExp(
-        chabotKeywords.map((keyword) => keyword.replace("*", "\\S*")).join("|"),
+        chabotKeywords
+          .map((keyword) => keyword.replaceAll("*", "\\S*"))
+          .join("|"),
         "i"
       );
 
