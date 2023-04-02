@@ -1,5 +1,7 @@
+import type { BridgeOptions } from "discord-cross-hosting";
+
 import env from "./env/server.js";
-import { Bridge, BridgeOptions } from "discord-cross-hosting";
+import { Bridge } from "discord-cross-hosting";
 
 const opts: BridgeOptions = {
   port: env.BRIDGE_PORT || 4444,

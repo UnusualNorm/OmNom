@@ -1,7 +1,9 @@
+import type { ClusterClientData } from "discord-hybrid-sharding";
+
 import "@sapphire/plugin-subcommands/register";
 import { ActivityType, GatewayIntentBits, Partials } from "discord.js";
 import { SapphireClient } from "@sapphire/framework";
-import { ClusterClient, ClusterClientData } from "discord-hybrid-sharding";
+import { ClusterClient } from "discord-hybrid-sharding";
 import hosting from "discord-cross-hosting";
 import env from "./env/bot.js";
 import db from "./utils/db.js";

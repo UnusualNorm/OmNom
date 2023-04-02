@@ -1,3 +1,5 @@
+import type { WebhookMessageCreateOptions } from "discord.js";
+
 import {
   ForumChannel,
   Message,
@@ -6,7 +8,6 @@ import {
   TextChannel,
   ThreadChannel,
   VoiceChannel,
-  WebhookMessageCreateOptions,
 } from "discord.js";
 
 export async function getCreateWebhook(

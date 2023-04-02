@@ -1,8 +1,10 @@
+import type { JobStatusResponse } from "../utils/kobold.js";
+
 import { ApplyOptions } from "@sapphire/decorators";
 import { Listener } from "@sapphire/framework";
 import { ChannelType, Message, PermissionFlagsBits, Webhook } from "discord.js";
 import env from "../env/bot.js";
-import { JobStatusResponse, KoboldAIHorde } from "../utils/kobold.js";
+import { KoboldAIHorde } from "../utils/kobold.js";
 import { getCreateWebhook } from "../utils/webhook.js";
 
 const models = env.CHATBOT_MODELS.split(",");
