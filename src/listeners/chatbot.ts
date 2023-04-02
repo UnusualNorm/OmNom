@@ -90,7 +90,10 @@ export class ChatbotListener extends Listener {
 
     // Add all the messages in the memory to the prompt
     prompt += memory
-      .map((message) => `${message.author.username}: ${message.content}`)
+      .map(
+        (message) =>
+          `${message.author.username}: ${this.parseUserInput(message)}`
+      )
       .join("\n");
 
     // Add the chat bot's name to the prompt
