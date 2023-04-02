@@ -264,7 +264,6 @@ export class ChatbotListener extends Listener {
     const firstMessageIndex = messages.findIndex(
       (m) => !(m.webhookId || m.author.id == this.container.client.id)
     );
-    console.log(firstMessageIndex);
     if (firstMessageIndex >= 0) messages = messages.slice(firstMessageIndex);
 
     // Construct the prompt
@@ -274,8 +273,6 @@ export class ChatbotListener extends Listener {
       chatbotHello,
       messages
     );
-
-    console.log(prompt);
 
     // Cancel the current job if it exists
     jobRequestCancels.get(message.channel.id)?.();
