@@ -223,7 +223,14 @@ export class ChatbotListener extends Listener {
     }
 
     // If we're a set chatbot, check if the message includes keywords
-    if (!jobRequestCancels.has(message.channel.id) && chatbotConfig) {
+    if (
+      !jobRequestCancels.has(message.channel.id) &&
+      chatbotConfig &&
+      !(
+        (reference?.webhookId && reference.author.username == chatbotName) ||
+        reference?.author.id == this.container.client.id
+      )
+    ) {
       // This should support wildcard keywords
       const includesKeyword = chatbotKeywords.some((keyword) =>
         wcMatch(keyword, message.content)
