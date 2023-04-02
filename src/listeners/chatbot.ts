@@ -242,15 +242,15 @@ export class ChatbotListener extends Listener {
       (m) => Date.now() - m.createdAt.getTime() <= memoryTimeLimit
     );
 
-    // createPrompt expects the most recent message to be last,
-    // Currently the messages are in reverse order
-    messages = messages.reverse();
-
     // If any messages are the limiter, we need to remove all previous messages
     const limiterIndex = messages.findIndex(
       (m) => m.content == env.CHATBOT_LIMITER
     );
-    if (limiterIndex != -1) messages = messages.slice(limiterIndex + 1);
+    if (limiterIndex >= 0) messages = messages.slice(0, limiterIndex);
+
+    // createPrompt expects the most recent message to be last,
+    // Currently the messages are in reverse order
+    messages = messages.reverse();
 
     // Construct the prompt
     const prompt = await this.createPrompt(
