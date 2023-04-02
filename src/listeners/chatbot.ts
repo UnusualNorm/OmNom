@@ -17,6 +17,16 @@ const horde = new KoboldAIHorde(env.KOBOLD_KEY, {
   models,
 });
 
+function wcMatch(rule: string, text: string) {
+  return new RegExp(
+    "^" +
+      rule
+        .replaceAll(/([.+?^=!:${}()|\[\]\/\\])/g, "\\$1")
+        .replaceAll("*", "(.*)") +
+      "$"
+  ).test(text);
+}
+
 async function replaceAsync(
   str: string,
   regex: RegExp,
@@ -161,7 +171,7 @@ export class ChatbotListener extends Listener {
     const chatbotName =
       chatbotConfig?.name || this.container.client.user?.username || "Robot";
     const chatbotAvatar = chatbotConfig?.avatar;
-    const chabotKeywords = [chatbotName].concat(
+    const chatbotKeywords = [chatbotName].concat(
       chatbotConfig?.keywords?.split(",") ?? []
     );
     const chatbotPersona = chatbotConfig?.persona ?? env.CHATBOT_PERSONA;
@@ -212,21 +222,15 @@ export class ChatbotListener extends Listener {
         return;
     }
 
-    // If we're a webhook, and the bot isn't directly messaged, check if the message includes keywords
-    if (
-      !jobRequestCancels.has(message.channel.id) &&
-      useWebhooks &&
-      !(reference?.webhookId && reference.author.username == chatbotName)
-    ) {
-      const keywordsRegex = new RegExp(
-        chabotKeywords
-          .map((keyword) => keyword.replaceAll("*", "\\S*"))
-          .join("|"),
-        "i"
+    // If we're a set chatbot, check if the message includes keywords
+    if (!jobRequestCancels.has(message.channel.id) && chatbotConfig) {
+      // This should support wildcard keywords
+      const includesKeyword = chatbotKeywords.some((keyword) =>
+        wcMatch(keyword, message.content)
       );
 
       // If the message does not include keywords, stop
-      if (!keywordsRegex.test(message.content)) return;
+      if (!includesKeyword) return;
     }
 
     // Start typing
