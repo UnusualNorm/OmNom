@@ -89,12 +89,14 @@ export class ChatbotListener extends Listener {
     !hello || (prompt += `${name}: ${hello}\n`);
 
     // Add all the messages in the memory to the prompt
-    prompt += memory
-      .map(
-        (message) =>
-          `${message.author.username}: ${this.parseUserInput(message)}`
+    prompt += (
+      await Promise.all(
+        memory.map(
+          async (message) =>
+            `${message.author.username}: ${await this.parseUserInput(message)}`
+        )
       )
-      .join("\n");
+    ).join("\n");
 
     // Add the chat bot's name to the prompt
     prompt += `\n${name}:`;
