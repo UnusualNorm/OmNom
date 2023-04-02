@@ -2,7 +2,7 @@ import env from "./env/cluster.js";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import hosting from "discord-cross-hosting";
-import { Manager } from "discord-hybrid-sharding";
+import { ClusterManager } from "discord-hybrid-sharding";
 import { join } from "path";
 
 const { Client } = hosting;
@@ -20,7 +20,7 @@ const client = new Client({
 client.on("debug", console.debug);
 client.connect();
 
-const manager = new Manager(join(__dirname, "bot.js"), {
+const manager = new ClusterManager(join(__dirname, "bot.js"), {
   totalShards: env.CLUSTER_TOTAL_SHARDS || "auto",
   totalClusters: env.CLUSTER_TOTAL_CLUSTERS || "auto",
 });
@@ -35,7 +35,7 @@ client
     if (!e.shardList) return;
     manager.totalShards = e.totalShards;
     manager.totalClusters = e.shardList.length;
-    manager.shardList = e.shardList;
+    manager.shardList = e.shardList.flat();
     manager.clusterList = e.clusterList;
     manager.spawn({ timeout: -1 });
   })
