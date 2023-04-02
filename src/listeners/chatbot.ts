@@ -6,6 +6,7 @@ import { ChannelType, Message, PermissionFlagsBits, Webhook } from "discord.js";
 import env from "../env/bot.js";
 import { KoboldAIHorde } from "../utils/kobold.js";
 import { getCreateWebhook } from "../utils/webhook.js";
+import emojiRegex from "emoji-regex";
 
 const models = env.CHATBOT_MODELS.split(",");
 const memoryTimeLimit = env.CHATBOT_MEMORY * 60000;
@@ -131,7 +132,10 @@ export class ChatbotListener extends Listener {
           ?.has(PermissionFlagsBits.AddReactions))
     ) {
       jobRequestCancels.get(message.channel.id)?.();
-      return message.react("👍");
+      const isEmoji = emojiRegex().test(env.CHATBOT_REACTION);
+      return isEmoji
+        ? message.react(env.CHATBOT_REACTION)
+        : message.reply(env.CHATBOT_REACTION);
     }
 
     // Do not run if the message is from a webhook or the bot
@@ -256,6 +260,13 @@ export class ChatbotListener extends Listener {
     // Currently the messages are in reverse order
     messages = messages.reverse();
 
+    // Make sure that a non-bot message is the first message
+    const firstMessageIndex = messages.findIndex(
+      (m) => !(m.webhookId || m.author.id == this.container.client.id)
+    );
+    console.log(firstMessageIndex);
+    if (firstMessageIndex >= 0) messages = messages.slice(firstMessageIndex);
+
     // Construct the prompt
     const prompt = await this.createPrompt(
       chatbotName,
@@ -263,6 +274,8 @@ export class ChatbotListener extends Listener {
       chatbotHello,
       messages
     );
+
+    console.log(prompt);
 
     // Cancel the current job if it exists
     jobRequestCancels.get(message.channel.id)?.();
