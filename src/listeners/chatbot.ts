@@ -248,23 +248,32 @@ export class ChatbotListener extends Listener {
     // Start typing
     await message.channel.sendTyping();
 
-    // If we have a cache at or over our size limit, use that
-    let messages: Message[];
-    if (message.channel.messages.cache.size >= memoryLengthLimit)
-      messages = message.channel.messages.cache.first(
-        memoryLengthLimit
-      )! as Message[];
-    // Otherwise, fetch the messages
-    // TODO: Add a flag to show that this channel just has a small amount of messages
-    //       it currently always fetches messages if the cache is not full
-    else
-      messages = [
-        ...(
-          await message.channel.messages.fetch({
-            limit: memoryLengthLimit,
-          })
-        ).values(),
-      ];
+    // FIXME: Cache behaves very weirdly for @Mr_moon...
+    // // If we have a cache at or over our size limit, use that
+    // let messages: Message[];
+    // if (message.channel.messages.cache.size >= memoryLengthLimit)
+    //   messages = message.channel.messages.cache.first(
+    //     memoryLengthLimit
+    //   )! as Message[];
+    // // Otherwise, fetch the messages
+    // // TODO: Add a flag to show that this channel just has a small amount of messages
+    // //       it currently always fetches messages if the cache is not full
+    // else
+    //   messages = [
+    //     ...(
+    //       await message.channel.messages.fetch({
+    //         limit: memoryLengthLimit,
+    //       })
+    //     ).values(),
+    //   ];
+
+    const messages = [
+      ...(
+        await message.channel.messages.fetch({
+          limit: memoryLengthLimit,
+        })
+      ).values(),
+    ];
 
     // Filter the messages that our bot should not remember
     messages = messages.filter(
