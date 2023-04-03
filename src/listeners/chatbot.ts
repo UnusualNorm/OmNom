@@ -267,7 +267,7 @@ export class ChatbotListener extends Listener {
     //     ).values(),
     //   ];
 
-    const messages = [
+    let messages = [
       ...(
         await message.channel.messages.fetch({
           limit: memoryLengthLimit,
