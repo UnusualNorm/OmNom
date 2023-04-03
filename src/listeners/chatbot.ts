@@ -21,7 +21,7 @@ function wcMatch(rule: string, text: string) {
   return new RegExp(
     "^" +
       rule
-        .replaceAll(/([.+?^=!:${}()|\[\]\/\\])/g, "\\$1")
+        .replaceAll(/([.+?^=!:${}()|[\]/\\])/g, "\\$1")
         .replaceAll("*", "(.*)") +
       "$"
   ).test(text);
@@ -138,7 +138,7 @@ export class ChatbotListener extends Listener {
     // Do not run if the message is in a thread without a parent
     if (message.channel.isThread() && !message.channel.parent) return;
 
-    // If the message is the limiter, react to it
+    // If the message is the limiter, respond accordingly
     if (
       message.content == env.CHATBOT_LIMITER &&
       (message.channel.type == ChannelType.DM ||
@@ -167,13 +167,11 @@ export class ChatbotListener extends Listener {
       .where("id", message.channel.id)
       .first();
 
-    // Get the chatbot's configs, with defaults
+    // Insert default values into the chatbot config
     const chatbotName =
       chatbotConfig?.name || this.container.client.user?.username || "Robot";
     const chatbotAvatar = chatbotConfig?.avatar;
-    const chatbotKeywords = [chatbotName].concat(
-      chatbotConfig?.keywords?.split(",") ?? []
-    );
+    const chatbotKeywords = chatbotConfig?.keywords?.split(",") ?? [];
     const chatbotPersona = chatbotConfig?.persona ?? env.CHATBOT_PERSONA;
     const chatbotHello = chatbotConfig?.hello ?? env.CHATBOT_HELLO;
 
@@ -199,12 +197,12 @@ export class ChatbotListener extends Listener {
     // Get message reference (reply)
     const reference = message.reference ? await message.fetchReference() : null;
 
-    // If we should run with the global chatbot, and we're not in a DM, check if the message mentions us
-    if (
-      !jobRequestCancels.has(message.channel.id) &&
-      !chatbotConfig &&
-      !message.channel.isDMBased()
-    ) {
+    // If we should run with the global chatbot, DM's are always global
+    const useGlobal = chatbotConfig || message.channel.isDMBased();
+
+    runCheck: if (!jobRequestCancels.has(message.channel.id)) break runCheck;
+    // We never need to check if we're enabled if we're a DM
+    else if (useGlobal && !message.channel.isDMBased()) {
       const globalChatbot = await this.container.client
         .db("global_chatbots")
         .select()
@@ -214,30 +212,37 @@ export class ChatbotListener extends Listener {
       // If the global chatbot is not enabled, stop
       if (!globalChatbot?.enabled) return;
 
-      // If we have not been mentioned, stop
+      // If we have been mentioned, continue
       if (
-        !message.mentions.has(this.container.client.user?.id || "") &&
-        reference?.author.id != this.container.client.user?.id
+        message.mentions.has(this.container.client.user?.id || "") ||
+        reference?.author.id == this.container.client.user?.id
       )
-        return;
+        break runCheck;
+
+      // Otherwise, stop
+      return;
     }
 
     // If we're a set chatbot, check if the message includes keywords
-    if (
-      !jobRequestCancels.has(message.channel.id) &&
-      chatbotConfig &&
-      !(
-        (reference?.webhookId && reference.author.username == chatbotName) ||
-        reference?.author.id == this.container.client.id
+    else if (chatbotConfig) {
+      // If we're being directly mentioned, continue
+      if (
+        useWebhooks
+          ? reference?.webhookId && reference.author.username == chatbotName
+          : reference?.author.id == this.container.client.id
       )
-    ) {
+        break runCheck;
+
       // This should support wildcard keywords
       const includesKeyword = chatbotKeywords.some((keyword) =>
         wcMatch(keyword, message.content)
       );
 
-      // If the message does not include keywords, stop
-      if (!includesKeyword) return;
+      // If the message contains a keyword, continue
+      if (includesKeyword) break runCheck;
+
+      // Otherwise, stop
+      return;
     }
 
     // Start typing
@@ -278,7 +283,10 @@ export class ChatbotListener extends Listener {
 
     // Make sure that a non-bot message is the first message
     const firstMessageIndex = messages.findIndex(
-      (m) => !(m.webhookId || m.author.id == this.container.client.id)
+      (m) =>
+        !(useWebhooks
+          ? m.webhookId && m.author.username == chatbotName
+          : m.author.id == this.container.client.id)
     );
     if (firstMessageIndex >= 0) messages = messages.slice(firstMessageIndex);
 
