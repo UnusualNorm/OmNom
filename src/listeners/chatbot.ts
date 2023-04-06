@@ -198,9 +198,9 @@ export class ChatbotListener extends Listener {
     const reference = message.reference ? await message.fetchReference() : null;
 
     // If we should run with the global chatbot, DM's are always global
-    const useGlobal = chatbotConfig || message.channel.isDMBased();
+    const useGlobal = !chatbotConfig || message.channel.isDMBased();
 
-    runCheck: if (!jobRequestCancels.has(message.channel.id)) break runCheck;
+    runCheck: if (jobRequestCancels.has(message.channel.id)) break runCheck;
     // We never need to check if we're enabled if we're a DM
     else if (useGlobal && !message.channel.isDMBased()) {
       const globalChatbot = await this.container.client
