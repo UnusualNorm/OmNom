@@ -41,7 +41,7 @@
     "zalgo-js": "^1.0.0"
   },
   "devDependencies": {
-    "@tsconfig/esm": "^1.0.2",
+    "@tsconfig/esm": "^1.0.3",
     "@tsconfig/node-lts": "^18.12.1",
     "@tsconfig/strictest": "^2.0.0",
     "@types/node": "^18.15.11",
