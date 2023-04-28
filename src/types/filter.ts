@@ -9,5 +9,5 @@ export interface Filter {
     message: WebhookMessageCreateOptions
   ): WebhookMessageCreateOptions | Promise<WebhookMessageCreateOptions>;
 
-  preview(text: string): string | Promise<string>;
+  preview(text: string, username: string): string | Promise<string>;
 }

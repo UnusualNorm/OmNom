@@ -18,77 +18,6 @@ import { Subcommand } from "@sapphire/plugin-subcommands";
   ],
 })
 export class ImageCommand extends Subcommand {
-  public async search(interaction: ChatInputCommandInteraction) {
-    try {
-      const search = interaction.options.getString("query", true);
-      if (!search)
-        return interaction.reply({
-          content: "Please input a search query!",
-          ephemeral: true,
-        });
-
-      await interaction.deferReply();
-      const safetyConfig = await this.container.client
-        .db("image_safety")
-        .select()
-        .where("id", interaction.guildId)
-        .first();
-      const results = await gis(search, {
-        safe: safetyConfig?.safe ?? true ? "on" : "off",
-      });
-      const randomResultI = Math.floor(Math.random() * results.length);
-      const randomResult = results[randomResultI];
-
-      if (!randomResult)
-        return interaction.editReply({
-          content: `Failed to find an image for the search "${search}"!`,
-        });
-
-      const embed = new EmbedBuilder().setImage(randomResult.url);
-
-      return interaction.editReply({
-        content: `Introducing... "${search}"!`,
-        embeds: [embed],
-      });
-    } catch (error) {
-      console.error(`[ERROR] (image) ${error}`);
-      return interaction.editReply("Something went wrong!");
-    }
-  }
-
-  public async safety(interaction: ChatInputCommandInteraction) {
-    const enabled = interaction.options.getBoolean("enabled", true);
-
-    if (!interaction.inGuild()) {
-      await interaction.reply({
-        content: `This command can only be used in a guild!`,
-        ephemeral: true,
-      });
-      return;
-    }
-
-    // Maybe our db connection is slow, defer the interaction.
-    await interaction.deferReply({
-      ephemeral: true,
-    });
-
-    // Update the global chatbot. Insert if it doesn't exist.
-    await this.container.client
-      .db("image_safety")
-      .insert({
-        id: interaction.guildId,
-        safe: enabled,
-      })
-      .onConflict("id")
-      .merge();
-
-    // Send a confirmation message.
-    await interaction.editReply({
-      content: `Successfully ${enabled ? "enabled" : "disabled"} safe search!`,
-    });
-    return;
-  }
-
   override registerApplicationCommands(registry: Subcommand.Registry) {
     registry.registerChatInputCommand(
       (builder) =>
@@ -121,5 +50,79 @@ export class ImageCommand extends Subcommand {
         behaviorWhenNotIdentical: RegisterBehavior.Overwrite,
       }
     );
+  }
+
+  public async search(interaction: ChatInputCommandInteraction) {
+    const search = interaction.options.getString("query", true);
+
+    await interaction.deferReply();
+
+    try {
+      const safetyConfig = await this.container.client
+        .db("image_safety")
+        .select()
+        .where("id", interaction.guildId)
+        .first();
+
+      const results = await gis(search, {
+        safe: safetyConfig?.safe ?? true ? "on" : "off",
+      });
+      const randomResult = results[Math.floor(Math.random() * results.length)];
+
+      if (!randomResult)
+        return interaction.editReply({
+          content: `Failed to find an image for the search, "${search}"...`,
+        });
+
+      const embed = new EmbedBuilder().setImage(randomResult.url);
+
+      return interaction.editReply({
+        content: `Introducing... "${search}"!`,
+        embeds: [embed],
+      });
+    } catch (error) {
+      this.container.logger.error(error);
+      return interaction.editReply(
+        "There was an error while searching for an image..."
+      );
+    }
+  }
+
+  public async safety(interaction: ChatInputCommandInteraction) {
+    const enabled = interaction.options.getBoolean("enabled", true);
+
+    if (!interaction.inGuild())
+      return interaction.reply({
+        content: `This command can only be used in a guild!`,
+        ephemeral: true,
+      });
+
+    await interaction.deferReply({
+      ephemeral: true,
+    });
+
+    try {
+      // Update the image safety. Insert if it doesn't exist.
+      await this.container.client
+        .db("image_safety")
+        .insert({
+          id: interaction.guildId,
+          safe: enabled,
+        })
+        .onConflict("id")
+        .merge();
+
+      // Send a confirmation message.
+      return interaction.editReply({
+        content: `Successfully ${
+          enabled ? "enabled" : "disabled"
+        } safe search!`,
+      });
+    } catch (error) {
+      this.container.logger.error(error);
+      return interaction.editReply({
+        content: "An error occurred while toggling safe search...",
+      });
+    }
   }
 }

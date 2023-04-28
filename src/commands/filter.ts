@@ -15,9 +15,7 @@ import {
   VoiceChannel,
 } from "discord.js";
 
-import type { Filter } from "../types/filter";
-import * as rawFilters from "../filters/index.js";
-const filters = Object.values(rawFilters) as Filter[];
+import filters from "../filters.js";
 
 @ApplyOptions<Subcommand.Options>({
   name: "filter",
@@ -47,7 +45,7 @@ export class FilterCommand extends Subcommand {
         builder
           .setName("filter")
           .setDescription(
-            `Change ${this.container.client.user!.username} filter settings!`
+            `Change ${this.container.client.user?.username} filter settings!`
           )
           .addSubcommand((builder) =>
             builder
@@ -57,8 +55,13 @@ export class FilterCommand extends Subcommand {
                 builder
                   .setName("filter")
                   .setRequired(true)
-                  .setAutocomplete(true)
                   .setDescription("The filter to apply to the target.")
+                  .setChoices(
+                    ...filters.map((filter) => ({
+                      name: filter.friendlyName,
+                      value: filter.name,
+                    }))
+                  )
               )
               .addMentionableOption((builder) =>
                 builder
@@ -93,7 +96,12 @@ export class FilterCommand extends Subcommand {
                 builder
                   .setName("filter")
                   .setRequired(true)
-                  .setAutocomplete(true)
+                  .setChoices(
+                    ...filters.map((filter) => ({
+                      name: filter.friendlyName,
+                      value: filter.name,
+                    }))
+                  )
                   .setDescription("The filter to apply to the text.")
               )
               .addStringOption((builder) =>
@@ -110,7 +118,7 @@ export class FilterCommand extends Subcommand {
   }
 
   public override autocompleteRun(interaction: AutocompleteInteraction) {
-    // This assumes that we only want to autocomplete filters.
+    // This assumes that we only want to autocomplete filters...
     const focusedValue = interaction.options.getFocused().toString();
     const autoComplete = filters.filter((filter) =>
       filter.friendlyName.toLowerCase().startsWith(focusedValue.toLowerCase())
@@ -121,7 +129,7 @@ export class FilterCommand extends Subcommand {
       value: choice.name,
     }));
 
-    interaction.respond(autoCompleteMap);
+    return interaction.respond(autoCompleteMap);
   }
 
   public async preview(interaction: ChatInputCommandInteraction) {
@@ -132,9 +140,20 @@ export class FilterCommand extends Subcommand {
       return interaction.editReply(`Invalid filter: ${filterName}...`);
 
     await interaction.deferReply();
-    const text = interaction.options.getString("text");
-    const preview = await filter.preview(text || "");
-    return interaction.editReply(preview);
+
+    try {
+      const text = interaction.options.getString("text");
+      const preview = await filter.preview(
+        text || "",
+        interaction.user?.displayAvatarURL()
+      );
+      return interaction.editReply(preview);
+    } catch (error) {
+      this.container.logger.error(error);
+      return interaction.editReply(
+        "There was an error previewing the filter..."
+      );
+    }
   }
 
   public status(interaction: ChatInputCommandInteraction) {
@@ -144,28 +163,20 @@ export class FilterCommand extends Subcommand {
         ephemeral: true,
       });
 
-    const channels = interaction.guild!.channels.cache.filter(
+    const supportedChannels = interaction.guild?.channels.cache.filter(
       (channel) =>
         channel.isTextBased() &&
         channel
-          .permissionsFor(this.container.client.user!.id)
-          ?.has(PermissionFlagsBits.ViewChannel)
-    );
-
-    const supportedChannels = channels.filter(
-      (channel) =>
-        channel
-          .permissionsFor(this.container.client.user!.id)
-          ?.has(PermissionFlagsBits.ManageMessages) &&
-        channel
-          .permissionsFor(this.container.client.user!.id)
-          ?.has(PermissionFlagsBits.ManageWebhooks)
+          .permissionsFor(this.container.client.user?.id || "")
+          ?.has([
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.ManageMessages,
+            PermissionFlagsBits.ManageWebhooks,
+          ])
     );
 
     return interaction.reply({
-      content: `${this.container.client.user!.username} filters work in ${
-        supportedChannels.size
-      }/${channels.size} channels!`,
+      content: `${this.container.client.user?.username} filters work in ${supportedChannels?.size}/${interaction.guild?.channels.cache.size} channels!`,
       ephemeral: true,
     });
   }
@@ -179,7 +190,8 @@ export class FilterCommand extends Subcommand {
       });
 
     const filterName = interaction.options.getString("filter");
-    if (!Object.values(filters).find((filter) => filter.name == filterName))
+    const filter = filters.find((filter) => filter.name == filterName);
+    if (!filter)
       return interaction.reply({
         content: "Please supply a valid filter...",
         ephemeral: true,
@@ -210,25 +222,30 @@ export class FilterCommand extends Subcommand {
       ephemeral: true,
     });
 
-    await this.container.client
-      .db("filters")
-      .delete()
-      .where("id", target.id)
-      .where("guild", interaction.guildId)
-      .where("type", targetType);
+    try {
+      await this.container.client
+        .db("filters")
+        .delete()
+        .where("id", target.id)
+        .where("guild", interaction.guildId)
+        .where("type", targetType);
 
-    await this.container.client.db("filters").insert({
-      id: target.id,
-      guild: interaction.guildId,
-      type: targetType,
-      filter: filterName as string,
-    });
+      await this.container.client.db("filters").insert({
+        id: target.id,
+        guild: interaction.guildId,
+        type: targetType,
+        filter: filterName as string,
+      });
 
-    return interaction.editReply(
-      `Applied filter "${filterName}" to <@${
-        targetType == "role" ? "&" : targetType == "channel" ? "#" : ""
-      }${target.id}>`
-    );
+      return interaction.editReply(
+        `Applied filter "${filter.friendlyName}" to <@${
+          targetType == "role" ? "&" : targetType == "channel" ? "#" : ""
+        }${target.id}>`
+      );
+    } catch (error) {
+      this.container.logger.error(error);
+      return interaction.editReply("There was an error applying the filter...");
+    }
   }
 
   public async remove(interaction: ChatInputCommandInteraction) {
@@ -263,17 +280,29 @@ export class FilterCommand extends Subcommand {
       ephemeral: true,
     });
 
-    await this.container.client
-      .db("filters")
-      .delete()
-      .where("id", target.id)
-      .where("guild", interaction.guildId)
-      .where("type", targetType);
+    try {
+      const removed = await this.container.client
+        .db("filters")
+        .delete()
+        .where("id", target.id)
+        .where("guild", interaction.guildId)
+        .where("type", targetType);
 
-    return interaction.editReply(
-      `Removed all filters from <@${
-        targetType == "role" ? "&" : targetType == "channel" ? "#" : ""
-      }${target.id}>`
-    );
+      if (!removed)
+        return interaction.editReply(
+          `There are already no filters applied to <@${
+            targetType == "role" ? "&" : targetType == "channel" ? "#" : ""
+          }${target.id}>..`
+        );
+
+      return interaction.editReply(
+        `Removed all filters from <@${
+          targetType == "role" ? "&" : targetType == "channel" ? "#" : ""
+        }${target.id}>!`
+      );
+    } catch (error) {
+      this.container.logger.error(error);
+      return interaction.editReply("There was an error removing the filter...");
+    }
   }
 }

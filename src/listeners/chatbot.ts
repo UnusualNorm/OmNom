@@ -1,10 +1,15 @@
-import type { JobStatusResponse } from "../utils/kobold.js";
-
 import { ApplyOptions } from "@sapphire/decorators";
 import { Listener } from "@sapphire/framework";
-import { ChannelType, Message, PermissionFlagsBits, Webhook } from "discord.js";
+import {
+  ChannelType,
+  Message,
+  MessageFlags,
+  MessageType,
+  PermissionFlagsBits,
+  Webhook,
+} from "discord.js";
 import env from "../env/bot.js";
-import { KoboldAIHorde } from "../utils/kobold.js";
+import { KoboldAIHorde, type JobStatusResponse } from "../utils/kobold.js";
 import { getCreateWebhook } from "../utils/webhook.js";
 import emojiRegex from "emoji-regex";
 
@@ -118,7 +123,7 @@ export class ChatbotListener extends Listener {
     const lines = message.trim().split("\n");
 
     // The first line is always the bot's response
-    const botLine = lines.splice(0, 1)[0]!;
+    const botLine = lines.splice(0, 1)[0] || "...";
 
     // Get all lines that start with the bot's name
     let foundImpersonation = false;
@@ -135,6 +140,8 @@ export class ChatbotListener extends Listener {
   }
 
   public async run(message: Message) {
+    if (message.partial) await message.fetch();
+
     // Do not run if the message is in a thread without a parent
     if (message.channel.isThread() && !message.channel.parent) return;
 
@@ -161,11 +168,13 @@ export class ChatbotListener extends Listener {
       return;
 
     // Get the chatbot config for this channel
-    const chatbotConfig = await this.container.client
-      .db("chatbots")
-      .select()
-      .where("id", message.channel.id)
-      .first();
+    const chatbotConfig = !message.channel.isDMBased()
+      ? await this.container.client
+          .db("chatbots")
+          .select()
+          .where("id", message.channel.id)
+          .first()
+      : undefined;
 
     // Insert default values into the chatbot config
     const chatbotName =
@@ -197,32 +206,11 @@ export class ChatbotListener extends Listener {
     // Get message reference (reply)
     const reference = message.reference ? await message.fetchReference() : null;
 
-    // If we should run with the global chatbot, DM's are always global
-    const useGlobal = !chatbotConfig || message.channel.isDMBased();
-
-    runCheck: if (jobRequestCancels.has(message.channel.id)) break runCheck;
-    // We never need to check if we're enabled if we're a DM
-    else if (useGlobal && !message.channel.isDMBased()) {
-      const globalChatbot = await this.container.client
-        .db("global_chatbots")
-        .select()
-        .where("id", message.channel.guildId)
-        .first();
-
-      // If the global chatbot is not enabled, stop
-      if (!globalChatbot?.enabled) return;
-
-      // If we have been mentioned, continue
-      if (
-        message.mentions.has(this.container.client.user?.id || "") ||
-        reference?.author.id == this.container.client.user?.id
-      )
-        break runCheck;
-
-      // Otherwise, stop
-      return;
-    }
-
+    runCheck: if (
+      jobRequestCancels.has(message.channel.id) ||
+      message.channel.isDMBased()
+    )
+      break runCheck;
     // If we're a set chatbot, check if the message includes keywords
     else if (chatbotConfig) {
       // If we're being directly mentioned, continue
@@ -243,37 +231,56 @@ export class ChatbotListener extends Listener {
 
       // Otherwise, stop
       return;
+    } else {
+      const globalChatbot = await this.container.client
+        .db("global_chatbots")
+        .select()
+        .where("id", message.channel.guildId)
+        .first();
+
+      // If the global chatbot is not enabled, stop
+      if (!globalChatbot?.enabled) return;
+
+      // If we have been mentioned, continue
+      if (
+        message.mentions.has(this.container.client.user?.id || "") ||
+        reference?.author.id == this.container.client.user?.id
+      )
+        break runCheck;
+
+      // Otherwise, stop
+      return;
     }
 
     // Start typing
     await message.channel.sendTyping();
 
     // FIXME: Cache behaves very weirdly for @Mr_moon...
-    // // If we have a cache at or over our size limit, use that
-    // let messages: Message[];
-    // if (message.channel.messages.cache.size >= memoryLengthLimit)
-    //   messages = message.channel.messages.cache.first(
-    //     memoryLengthLimit
-    //   )! as Message[];
-    // // Otherwise, fetch the messages
-    // // TODO: Add a flag to show that this channel just has a small amount of messages
-    // //       it currently always fetches messages if the cache is not full
-    // else
-    //   messages = [
-    //     ...(
-    //       await message.channel.messages.fetch({
-    //         limit: memoryLengthLimit,
-    //       })
-    //     ).values(),
-    //   ];
+    // If we have a cache at or over our size limit, use that
+    let messages: Message[];
+    if (message.channel.messages.cache.size >= memoryLengthLimit)
+      messages = message.channel.messages.cache.first(
+        memoryLengthLimit
+      ) as Message[];
+    // Otherwise, fetch the messages
+    // TODO: Add a flag to show that this channel just has a small amount of messages
+    //       it currently always fetches messages if the cache is not full
+    else
+      messages = [
+        ...(
+          await message.channel.messages.fetch({
+            limit: memoryLengthLimit,
+          })
+        ).values(),
+      ];
 
-    let messages = [
-      ...(
-        await message.channel.messages.fetch({
-          limit: memoryLengthLimit,
-        })
-      ).values(),
-    ];
+    // Filter the messages that are not regular messages
+    messages = messages.filter(
+      (message) =>
+        message.type == MessageType.Default ||
+        (MessageType.ChatInputCommand &&
+          !message.flags.has(MessageFlags.Ephemeral))
+    );
 
     // Filter the messages that our bot should not remember
     messages = messages.filter(
@@ -318,10 +325,7 @@ export class ChatbotListener extends Listener {
     const jobId = await horde.createJob(prompt);
 
     // Cancel the job if we received a cancel request
-    if (cancelled) {
-      await horde.cancelJob(jobId);
-      return;
-    }
+    if (cancelled) return horde.cancelJob(jobId);
 
     // Now that the job is created, we can make the cancel function cancel the job
     jobRequestCancels.set(message.channel.id, () => {
@@ -357,10 +361,11 @@ export class ChatbotListener extends Listener {
     let webhook: Webhook | undefined;
     if (useWebhooks)
       if (message.channel.isThread()) {
+        if (!message.channel.parent) return;
         threadId = message.channel.id;
         // I don't know if this is just a type error, but maybe it is possible to have a thread without a parent?
         // Whatever, I separated that check at the beginning so I don't waste my time.
-        webhook = await getCreateWebhook(message.channel.parent!);
+        webhook = await getCreateWebhook(message.channel.parent);
       } else webhook = await getCreateWebhook(message.channel);
 
     // Send the messages

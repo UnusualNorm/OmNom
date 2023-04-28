@@ -1,9 +1,7 @@
-import type { ClusterClientData } from "discord-hybrid-sharding";
-
 import "@sapphire/plugin-subcommands/register";
 import { ActivityType, GatewayIntentBits, Partials } from "discord.js";
 import { SapphireClient } from "@sapphire/framework";
-import { ClusterClient } from "discord-hybrid-sharding";
+import { ClusterClient, type ClusterClientData } from "discord-hybrid-sharding";
 import hosting from "discord-cross-hosting";
 import env from "./env/bot.js";
 import db from "./utils/db.js";
@@ -22,9 +20,10 @@ const client = new SapphireClient({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.DirectMessageReactions,
+    GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
   ],
-  partials: [Partials.Reaction],
+  partials: [Partials.Reaction, Partials.Channel, Partials.Message],
   shards: clientInitData?.SHARD_LIST,
   shardCount: clientInitData?.TOTAL_SHARDS,
 });

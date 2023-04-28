@@ -3,7 +3,7 @@ import type { Filter } from "../types/filter.js";
 function typoify(text: string) {
   const words = text.split(" ");
   for (let i = 0; i < words.length; i++) {
-    let word = words[i]!;
+    let word = words[i] as string;
     const typoChoice = Math.floor(
       Math.random() * (0 + (word.length > 1 ? 2 : 0))
     );

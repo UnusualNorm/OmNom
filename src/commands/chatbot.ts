@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction } from "discord.js";
+import { type ChatInputCommandInteraction } from "discord.js";
 import { Command, RegisterBehavior } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { Subcommand } from "@sapphire/plugin-subcommands";
@@ -24,14 +24,14 @@ import { Subcommand } from "@sapphire/plugin-subcommands";
     },
   ],
 })
-export class AntiVirusCommand extends Subcommand {
+export class ChatBotCommand extends Subcommand {
   override registerApplicationCommands(registry: Command.Registry) {
     registry.registerChatInputCommand(
       (builder) =>
         builder
           .setName("chatbot")
           .setDescription(
-            `Change ${this.container.client.user!.username} chatbot settings!`
+            `Change ${this.container.client.user?.username} chatbot settings!`
           )
           .addSubcommand((builder) =>
             builder
@@ -134,151 +134,150 @@ export class AntiVirusCommand extends Subcommand {
   }
 
   async create(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply({
+      ephemeral: true,
+    });
+
     const name = interaction.options.getString("name") ?? undefined;
     const avatar = interaction.options.getString("avatar") ?? undefined;
     const persona = interaction.options.getString("persona") ?? undefined;
     const hello = interaction.options.getString("hello") ?? undefined;
     const keywords = interaction.options.getString("keywords") ?? undefined;
 
-    // Maybe our db connection is slow, defer the interaction.
-    await interaction.deferReply({
-      ephemeral: true,
-    });
+    try {
+      // Create the chatbot.
+      await this.container.client
+        .db("chatbots")
+        .insert({
+          id: interaction.channelId,
+          name,
+          avatar,
+          persona,
+          hello,
+          keywords,
+        })
+        .onConflict("id")
+        .merge();
 
-    // If we already have a chatbot for this channel, delete it.
-    await this.container.client
-      .db("chatbots")
-      .delete()
-      .where("id", interaction.channelId);
-
-    // Create the chatbot.
-    await this.container.client.db("chatbots").insert({
-      id: interaction.channelId,
-      name,
-      avatar,
-      persona,
-      hello,
-      keywords,
-    });
-
-    // Send a confirmation message.
-    await interaction.editReply({
-      content: `Successfully created the chatbot for this channel!`,
-    });
-    return;
+      // Send a confirmation message.
+      return interaction.editReply({
+        content: `Successfully created a chatbot in this channel!`,
+      });
+    } catch (error) {
+      this.container.logger.error(error);
+      return interaction.editReply({
+        content: `An error occurred while creating a chatbot in this channel...`,
+      });
+    }
   }
 
   async configure(interaction: ChatInputCommandInteraction) {
+    await interaction.deferReply({
+      ephemeral: true,
+    });
+
     const option = interaction.options.getString("option", true);
     const value = interaction.options.getString("value", true);
 
-    // Maybe our db connection is slow, defer the interaction.
-    await interaction.deferReply({
-      ephemeral: true,
-    });
+    try {
+      // Make sure this is a valid option.
+      if (!["name", "avatar", "persona", "hello", "keywords"].includes(option))
+        return interaction.editReply({
+          content: `Invalid option!`,
+        });
 
-    // If we don't have a chatbot for this channel, send an error message.
-    const chatbot = await this.container.client
-      .db("chatbots")
-      .select("*")
-      .where("id", interaction.channelId)
-      .first();
+      // Update the chatbot.
+      const updated = await this.container.client
+        .db("chatbots")
+        .update({
+          [option]: value,
+        })
+        .where("id", interaction.channelId);
 
-    if (!chatbot) {
-      await interaction.editReply({
-        content: `There is no chatbot for this channel!`,
+      // If we didn't update anything, send an error message.
+      if (!updated)
+        return interaction.editReply({
+          content: "There is no chatbot in this channel!",
+        });
+
+      // Send a confirmation message.
+      return interaction.editReply({
+        content: `Successfully updated the chatbot in this channel!`,
       });
-      return;
-    }
-
-    // Make sure this is a valid option.
-    if (!["name", "avatar", "persona", "hello", "keywords"].includes(option)) {
-      await interaction.editReply({
-        content: `Invalid option!`,
+    } catch (error) {
+      this.container.logger.error(error);
+      return interaction.editReply({
+        content: `An error occurred while configuring the chatbot in this channel...`,
       });
-      return;
     }
-
-    // Update the chatbot.
-    await this.container.client
-      .db("chatbots")
-      .update({
-        [option]: value,
-      })
-      .where("id", interaction.channelId);
-
-    // Send a confirmation message.
-    await interaction.editReply({
-      content: `Successfully updated the chatbot for this channel!`,
-    });
-    return;
   }
 
   async delete(interaction: ChatInputCommandInteraction) {
-    // Maybe our db connection is slow, defer the interaction.
     await interaction.deferReply({
       ephemeral: true,
     });
 
-    // If we don't have a chatbot for this channel, send an error message.
-    const chatbot = await this.container.client
-      .db("chatbots")
-      .select("*")
-      .where("id", interaction.channelId)
-      .first();
+    try {
+      // Delete the chatbot.
+      const deleted = await this.container.client
+        .db("chatbots")
+        .delete()
+        .where("id", interaction.channelId);
 
-    if (!chatbot) {
-      await interaction.editReply({
-        content: `There is no chatbot for this channel!`,
+      // If we didn't delete anything, send an error message.
+      if (!deleted)
+        return interaction.editReply({
+          content: "There is no chatbot in this channel!",
+        });
+
+      // Send a confirmation message.
+      return interaction.editReply({
+        content: "Successfully deleted the chatbot in this channel!",
       });
-      return;
+    } catch (error) {
+      this.container.logger.error(error);
+      return interaction.editReply({
+        content:
+          "An error occurred while deleting the chatbot in this channel...",
+      });
     }
-
-    // Delete the chatbot.
-    await this.container.client
-      .db("chatbots")
-      .delete()
-      .where("id", interaction.channelId);
-
-    // Send a confirmation message.
-    await interaction.editReply({
-      content: `Successfully deleted the chatbot for this channel!`,
-    });
-    return;
   }
 
   async global(interaction: ChatInputCommandInteraction) {
-    const enabled = interaction.options.getBoolean("enabled", true);
-
-    if (!interaction.inGuild()) {
-      await interaction.reply({
-        content: `This command can only be used in a guild!`,
+    if (!interaction.inGuild())
+      return interaction.reply({
+        content: "This command can only be used in a guild!",
         ephemeral: true,
       });
-      return;
-    }
 
-    // Maybe our db connection is slow, defer the interaction.
     await interaction.deferReply({
       ephemeral: true,
     });
 
-    // Update the global chatbot. Insert if it doesn't exist.
-    await this.container.client
-      .db("global_chatbots")
-      .insert({
-        id: interaction.guildId,
-        enabled,
-      })
-      .onConflict("id")
-      .merge();
+    const enabled = interaction.options.getBoolean("enabled", true);
 
-    // Send a confirmation message.
-    await interaction.editReply({
-      content: `Successfully ${
-        enabled ? "enabled" : "disabled"
-      } the global chatbot!`,
-    });
-    return;
+    try {
+      // Update the global chatbot. Insert if it doesn't exist.
+      await this.container.client
+        .db("global_chatbots")
+        .insert({
+          id: interaction.guildId,
+          enabled,
+        })
+        .onConflict("id")
+        .merge();
+
+      // Send a confirmation message.
+      return interaction.editReply({
+        content: `Successfully ${
+          enabled ? "enabled" : "disabled"
+        } the global chatbot!`,
+      });
+    } catch (error) {
+      this.container.logger.error(error);
+      return interaction.editReply({
+        content: `An error occurred while toggling the global chatbot...`,
+      });
+    }
   }
 }

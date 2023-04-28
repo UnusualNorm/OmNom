@@ -10,5 +10,5 @@ export const pokemon: Filter = {
     content: message.username,
   }),
 
-  preview: () => "*Insert your username here :)*",
+  preview: (_, username) => username,
 };

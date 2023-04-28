@@ -4,10 +4,7 @@ import { Message, PermissionFlagsBits } from "discord.js";
 import { getCreateWebhook, messageToWebhookOptions } from "../utils/webhook.js";
 import { getAppliedFilters } from "../utils/filter.js";
 
-import type { Filter } from "../types/filter.js";
-import * as rawFilters from "../filters/index.js";
-
-const filters = Object.values(rawFilters) as Filter[];
+import filters from "../filters.js";
 const filterOrder = ["user", "role", "channel", "guild"];
 
 @ApplyOptions<Listener.Options>({
@@ -16,13 +13,15 @@ const filterOrder = ["user", "role", "channel", "guild"];
 })
 export class FilterListener extends Listener {
   public async run(message: Message) {
+    if (message.partial) await message.fetch();
+
     if (
       !message.inGuild() ||
       !message.channel
-        .permissionsFor(this.container.client.user!.id)
+        .permissionsFor(this.container.client.user?.id ?? "")
         ?.has(PermissionFlagsBits.ManageWebhooks) ||
       !message.channel
-        .permissionsFor(this.container.client.user!.id)
+        .permissionsFor(this.container.client.user?.id ?? "")
         ?.has(PermissionFlagsBits.ManageMessages)
     )
       return;

@@ -1,6 +1,5 @@
 import type { Filter } from "../types/filter.js";
 import env from "../env/bot.js";
-const apiKey = env.TENOR_KEY || "LIVDSRZULELA";
 
 type TenorSearchOutput = {
   results: {
@@ -98,9 +97,9 @@ type TenorSearchOutput = {
 
 async function getGif(query: string): Promise<string | undefined> {
   const res = await fetch(
-    `https://g.tenor.com/v1/search?key=${apiKey}&limit=1&contentfilter=high&q=${encodeURIComponent(
-      query
-    )}`
+    `https://g.tenor.com/v1/search?key=${
+      env.TENOR_KEY
+    }&limit=1&contentfilter=high&q=${encodeURIComponent(query)}`
   );
   const json: TenorSearchOutput = await res.json();
 

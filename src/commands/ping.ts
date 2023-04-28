@@ -1,8 +1,12 @@
+import { ApplyOptions } from "@sapphire/decorators";
 import { isMessageInstance } from "@sapphire/discord.js-utilities";
 import { Command, RegisterBehavior } from "@sapphire/framework";
-import type { ChatInputCommandInteraction } from "discord.js";
+import { type ChatInputCommandInteraction } from "discord.js";
 
-export class UserCommand extends Command {
+@ApplyOptions<Command.Options>({
+  name: "ping",
+})
+export class PingCommand extends Command {
   public override registerApplicationCommands(registry: Command.Registry) {
     registry.registerChatInputCommand(
       (builder) =>

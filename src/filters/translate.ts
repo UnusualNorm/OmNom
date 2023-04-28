@@ -7,7 +7,7 @@ const spanishify = async (message: string): Promise<string> => {
 
   const split = text.split(" ");
   for (let i = 0; i < split.length; i++) {
-    const word = split[i]!;
+    const word = split[i] as string;
     if (isUrl(word))
       split[
         i
