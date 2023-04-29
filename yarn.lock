@@ -336,15 +336,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sapphire/fetch@npm:^2.4.1":
-  version: 2.4.1
-  resolution: "@sapphire/fetch@npm:2.4.1"
-  dependencies:
-    cross-fetch: ^3.1.5
-  checksum: f8ab0baa59dfcb931729a46957073e4e26377b6b5e3bdbbed921ae793c0848a240545ed157efd5db13342d68eed84dc73c6fe83038a5e62af9daa3715326c4a9
-  languageName: node
-  linkType: hard
-
 "@sapphire/framework@npm:^4.4.2":
   version: 4.4.2
   resolution: "@sapphire/framework@npm:4.4.2"
@@ -504,10 +495,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^18.16.2":
-  version: 18.16.2
-  resolution: "@types/node@npm:18.16.2"
-  checksum: 7ad66d23b3b93885a9f879bff98e0196790ad35589b47a3d81b52db969ad17ee298082020296df5166c2d72d3cd6a4b9ab34d254483637d967944a4b3e6febdb
+"@types/node@npm:^18.16.3":
+  version: 18.16.3
+  resolution: "@types/node@npm:18.16.3"
+  checksum: 816b39d45b05ebdc6f362b630970df3f6d82f71d418a2555353522f4eeeb078fa201de5299f02c09a09faa975e43b2745fe19c263d44069f87ddf37d6c37b717
   languageName: node
   linkType: hard
 
@@ -783,12 +774,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"async-g-i-s@npm:^1.3.0":
-  version: 1.3.0
-  resolution: "async-g-i-s@npm:1.3.0"
+"async-g-i-s@https://github.com/UnusualNorm/async-g-i-s.git#commit=dbeb7e94b4674dfd58de4bae6c1807600ce5fa20":
+  version: 1.3.1
+  resolution: "async-g-i-s@https://github.com/UnusualNorm/async-g-i-s.git#commit=dbeb7e94b4674dfd58de4bae6c1807600ce5fa20"
   dependencies:
     cheerio: ^1.0.0-rc.12
-  checksum: beca4d1742deba039b29d1b1c3600f876e5ed5ff3a2f58cf0946e8f69f3334da3bfd7fe17155b30eaa24f5c7d91c55aba24875c771bec6aa5279af4c26ba15a0
+  checksum: 7f502bc0ffbba1d669fcc340b9e4475f038ce0f09092f7343cf5004be26198034962b75f7f2b2116d53ae92d777ddbc4cfc3e969c7d8ca5f0aaeda50bc6ed7d3
   languageName: node
   linkType: hard
 
@@ -1038,15 +1029,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cross-fetch@npm:^3.1.5":
-  version: 3.1.5
-  resolution: "cross-fetch@npm:3.1.5"
-  dependencies:
-    node-fetch: 2.6.7
-  checksum: f6b8c6ee3ef993ace6277fd789c71b6acf1b504fd5f5c7128df4ef2f125a429e29cd62dc8c127523f04a5f2fa4771ed80e3f3d9695617f441425045f505cf3bb
-  languageName: node
-  linkType: hard
-
 "cross-spawn@npm:^7.0.0, cross-spawn@npm:^7.0.2":
   version: 7.0.3
   resolution: "cross-spawn@npm:7.0.3"
@@ -1221,7 +1203,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"domhandler@npm:^5.0.1, domhandler@npm:^5.0.2, domhandler@npm:^5.0.3":
+"domhandler@npm:^5.0.2, domhandler@npm:^5.0.3":
   version: 5.0.3
   resolution: "domhandler@npm:5.0.3"
   dependencies:
@@ -1231,13 +1213,13 @@ __metadata:
   linkType: hard
 
 "domutils@npm:^3.0.1":
-  version: 3.0.1
-  resolution: "domutils@npm:3.0.1"
+  version: 3.1.0
+  resolution: "domutils@npm:3.1.0"
   dependencies:
     dom-serializer: ^2.0.0
     domelementtype: ^2.3.0
-    domhandler: ^5.0.1
-  checksum: 23aa7a840572d395220e173cb6263b0d028596e3950100520870a125af33ff819e6f609e1606d6f7d73bd9e7feb03bb404286e57a39063b5384c62b724d987b3
+    domhandler: ^5.0.3
+  checksum: e5757456ddd173caa411cfc02c2bb64133c65546d2c4081381a3bafc8a57411a41eed70494551aa58030be9e58574fcc489828bebd673863d39924fb4878f416
   languageName: node
   linkType: hard
 
@@ -1272,9 +1254,9 @@ __metadata:
   linkType: hard
 
 "entities@npm:^4.2.0, entities@npm:^4.4.0":
-  version: 4.4.0
-  resolution: "entities@npm:4.4.0"
-  checksum: 84d250329f4b56b40fa93ed067b194db21e8815e4eb9b59f43a086f0ecd342814f6bc483de8a77da5d64e0f626033192b1b4f1792232a7ea6b970ebe0f3187c2
+  version: 4.5.0
+  resolution: "entities@npm:4.5.0"
+  checksum: 853f8ebd5b425d350bffa97dd6958143179a5938352ccae092c62d1267c4e392a039be1bae7d51b6e4ffad25f51f9617531fedf5237f15df302ccfb452cbf2d7
   languageName: node
   linkType: hard
 
@@ -2489,20 +2471,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-fetch@npm:2.6.7":
-  version: 2.6.7
-  resolution: "node-fetch@npm:2.6.7"
-  dependencies:
-    whatwg-url: ^5.0.0
-  peerDependencies:
-    encoding: ^0.1.0
-  peerDependenciesMeta:
-    encoding:
-      optional: true
-  checksum: 8d816ffd1ee22cab8301c7756ef04f3437f18dace86a1dae22cf81db8ef29c0bf6655f3215cb0cdb22b420b6fe141e64b26905e7f33f9377a7fa59135ea3e10b
-  languageName: node
-  linkType: hard
-
 "node-fetch@npm:^2.6.1, node-fetch@npm:^2.6.7":
   version: 2.6.9
   resolution: "node-fetch@npm:2.6.9"
@@ -2647,18 +2615,17 @@ __metadata:
   dependencies:
     "@sapphire/decorators": ^6.0.1
     "@sapphire/discord.js-utilities": ^6.0.6
-    "@sapphire/fetch": ^2.4.1
     "@sapphire/framework": ^4.4.2
     "@sapphire/plugin-subcommands": ^4.0.1
     "@sapphire/utilities": ^3.11.1
     "@tsconfig/esm": ^1.0.3
     "@tsconfig/node-lts": ^18.12.1
     "@tsconfig/strictest": ^2.0.1
-    "@types/node": ^18.16.2
+    "@types/node": ^18.16.3
     "@typescript-eslint/eslint-plugin": ^5.59.1
     "@typescript-eslint/parser": ^5.59.1
     "@vitalets/google-translate-api": ^9.1.0
-    async-g-i-s: ^1.3.0
+    async-g-i-s: "https://github.com/UnusualNorm/async-g-i-s.git#commit=dbeb7e94b4674dfd58de4bae6c1807600ce5fa20"
     bufferutil: ^4.0.7
     discord-api-types: ^0.37.40
     discord-cross-hosting: ^2.3.2
