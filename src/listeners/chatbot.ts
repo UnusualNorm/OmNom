@@ -255,8 +255,6 @@ export class ChatbotListener extends Listener {
     // Start typing
     await message.channel.sendTyping();
 
-    // FIXME: Cache behaves very weirdly for @Mr_moon...
-    // If we have a cache at or over our size limit, use that
     let messages: Message[];
     if (message.channel.messages.cache.size >= memoryLengthLimit)
       messages = message.channel.messages.cache.first(
