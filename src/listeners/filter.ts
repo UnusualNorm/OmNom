@@ -1,11 +1,12 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Listener } from "@sapphire/framework";
-import { Message, PermissionFlagsBits } from "discord.js";
-import { getCreateWebhook, messageToWebhookOptions } from "../utils/webhook.js";
-import { getAppliedFilters } from "../utils/filter.js";
-
-import filters from "../filters.js";
-const filterOrder = ["user", "role", "channel", "guild"];
+import { Message } from "discord.js";
+import { getWebhook, messageToWebhookOptions } from "../utils/webhook.js";
+import {
+  applyFilters,
+  getAppliedFilters,
+  hasPermissions,
+} from "../utils/filter.js";
 
 @ApplyOptions<Listener.Options>({
   name: "filter",
@@ -14,45 +15,34 @@ const filterOrder = ["user", "role", "channel", "guild"];
 export class FilterListener extends Listener {
   public async run(message: Message) {
     if (message.partial) await message.fetch();
+    if (message.author.id == this.container.client.id) return;
+    if (message.channel.partial) await message.channel.fetch();
 
-    if (
-      !message.inGuild() ||
-      !message.channel
-        .permissionsFor(this.container.client.user?.id ?? "")
-        ?.has(PermissionFlagsBits.ManageWebhooks) ||
-      !message.channel
-        .permissionsFor(this.container.client.user?.id ?? "")
-        ?.has(PermissionFlagsBits.ManageMessages)
-    )
-      return;
+    if (!message.inGuild() || !hasPermissions(message.channel)) return;
 
-    const webhook = await getCreateWebhook(message.channel);
+    const webhook = await getWebhook(message.channel, true);
 
-    const filterNames = (
-      await getAppliedFilters(
-        message.guildId,
-        message.channelId,
-        message.author.id,
-        message.member?.roles.cache.map((role) => role.id)
-      )
-    )
-      .sort((a, b) => filterOrder.indexOf(a.type) - filterOrder.indexOf(b.type))
-      .map((filter) => filter.filter);
-    if (filterNames.length == 0) return;
+    const filters = await getAppliedFilters(
+      message.guildId,
+      message.channelId,
+      message.author.id,
+      message.member?.roles.cache.map((role) => role.id)
+    );
 
-    let newMessage = messageToWebhookOptions(message);
-    for (const filterName of [...new Set(filterNames)])
-      newMessage =
-        (await filters
-          .find((filter) => filter.name == filterName)
-          ?.run(newMessage)) || newMessage;
+    if (filters.length == 0) return;
+
+    const filteredMessage = applyFilters(
+      messageToWebhookOptions(message),
+      filters
+    );
 
     await webhook.send({
-      ...newMessage,
+      ...filteredMessage,
       allowedMentions: {
         parse: [],
       },
     });
-    await message.delete();
+
+    return message.delete();
   }
 }

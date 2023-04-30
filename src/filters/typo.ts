@@ -46,13 +46,13 @@ function typoify(text: string) {
 }
 
 const TypoFilter: Filter = {
-  name: "typo",
-  friendlyName: "Typo",
+  id: "typo",
+  name: "Typo",
   description: "Oh slly me, I madde a tpyo!",
 
   run: (message) => ({
     ...message,
-    content: message.content ? typoify(message.content) : "",
+    content: message.content ? typoify(message.content) : message.content,
   }),
 
   preview: (text) => typoify(text),

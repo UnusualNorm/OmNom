@@ -57,9 +57,9 @@ export class FilterCommand extends Subcommand {
                   .setRequired(true)
                   .setDescription("The filter to apply to the target.")
                   .setChoices(
-                    ...filters.map((filter) => ({
-                      name: filter.friendlyName,
-                      value: filter.name,
+                    ...Array.from(filters.values()).map((filter) => ({
+                      name: filter.name,
+                      value: filter.id,
                     }))
                   )
               )
@@ -97,9 +97,9 @@ export class FilterCommand extends Subcommand {
                   .setName("filter")
                   .setRequired(true)
                   .setChoices(
-                    ...filters.map((filter) => ({
-                      name: filter.friendlyName,
-                      value: filter.name,
+                    ...Array.from(filters.values()).map((filter) => ({
+                      name: filter.name,
+                      value: filter.id,
                     }))
                   )
                   .setDescription("The filter to apply to the text.")
@@ -120,21 +120,21 @@ export class FilterCommand extends Subcommand {
   public override autocompleteRun(interaction: AutocompleteInteraction) {
     // This assumes that we only want to autocomplete filters...
     const focusedValue = interaction.options.getFocused().toString();
-    const autoComplete = filters.filter((filter) =>
-      filter.friendlyName.toLowerCase().startsWith(focusedValue.toLowerCase())
+    const autoComplete = Array.from(filters.values()).filter((filter) =>
+      filter.name.toLowerCase().startsWith(focusedValue.toLowerCase())
     );
 
     const autoCompleteMap = autoComplete.map((choice) => ({
-      name: choice.friendlyName,
-      value: choice.name,
+      name: choice.name,
+      value: choice.id,
     }));
 
     return interaction.respond(autoCompleteMap);
   }
 
   public async preview(interaction: ChatInputCommandInteraction) {
-    const filterName = interaction.options.getString("filter");
-    const filter = filters.find((filter) => filter.name == filterName);
+    const filterName = interaction.options.getString("filter", true);
+    const filter = filters.get(filterName);
 
     if (!filter)
       return interaction.editReply(`Invalid filter: ${filterName}...`);
@@ -142,11 +142,8 @@ export class FilterCommand extends Subcommand {
     await interaction.deferReply();
 
     try {
-      const text = interaction.options.getString("text");
-      const preview = await filter.preview(
-        text || "",
-        interaction.user?.displayAvatarURL()
-      );
+      const text = interaction.options.getString("text", true);
+      const preview = await filter.preview(text, interaction.user.username);
       return interaction.editReply(preview);
     } catch (error) {
       this.container.logger.error(error);
@@ -190,7 +187,7 @@ export class FilterCommand extends Subcommand {
       });
 
     const filterName = interaction.options.getString("filter");
-    const filter = filters.find((filter) => filter.name == filterName);
+    const filter = filters.find((filter) => filter.id == filterName);
     if (!filter)
       return interaction.reply({
         content: "Please supply a valid filter...",
@@ -238,7 +235,7 @@ export class FilterCommand extends Subcommand {
       });
 
       return interaction.editReply(
-        `Applied filter "${filter.friendlyName}" to <@${
+        `Applied filter "${filter.name}" to <@${
           targetType == "role" ? "&" : targetType == "channel" ? "#" : ""
         }${target.id}>`
       );

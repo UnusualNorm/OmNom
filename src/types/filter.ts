@@ -1,7 +1,7 @@
 import type { WebhookMessageCreateOptions } from "discord.js";
 
 export interface Filter {
-  friendlyName: string;
+  id: string;
   name: string;
   description: string;
 

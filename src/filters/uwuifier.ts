@@ -16,18 +16,18 @@ uwuifier.actions = [
 ];
 
 export const uwu: Filter = {
-  name: "uwu",
-  friendlyName: "UwU",
+  id: "uwu",
+  name: "UwU",
   description: "OWO What's this?",
 
   run: (message) => ({
     ...message,
     username: message.username
       ? uwuifier.uwuifyWords(message.username)
-      : "Onii-Chan",
+      : message.username,
     content: message.content
       ? uwuifier.uwuifySentence(message.content).replaceAll("*", "\\*")
-      : "",
+      : message.content,
   }),
 
   preview: (text) => uwuifier.uwuifySentence(text).replaceAll("*", "\\*"),

@@ -1,8 +1,8 @@
 import type { Filter } from "../types/filter.js";
 
 export const reddit: Filter = {
-  name: "reddit",
-  friendlyName: "Reddit",
+  id: "reddit",
+  name: "Reddit",
   description: "[removed]",
 
   run: () => ({

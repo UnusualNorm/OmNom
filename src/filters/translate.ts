@@ -21,13 +21,15 @@ const spanishify = async (message: string): Promise<string> => {
 };
 
 export const spanish: Filter = {
-  name: "spanish",
-  friendlyName: "Spanish",
+  id: "spanish",
+  name: "Spanish",
   description: "*Nobody ever expects the spanish inquisition!*",
 
   run: async (message) => ({
     ...message,
-    content: message.content ? await spanishify(message.content) : "",
+    content: message.content
+      ? await spanishify(message.content)
+      : message.content,
   }),
   preview: (text: string) => spanishify(text),
 };

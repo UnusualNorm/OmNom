@@ -16,4 +16,7 @@ const filters: Filter[] = (
   )
 ).flat();
 
-export default filters;
+const filterMap = new Map<string, Filter>();
+for (const filter of filters) filterMap.set(filter.name, filter);
+
+export default filterMap;

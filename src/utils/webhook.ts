@@ -1,5 +1,4 @@
-import type { WebhookMessageCreateOptions } from "discord.js";
-
+import { isThreadChannel } from "@sapphire/discord.js-utilities";
 import {
   ForumChannel,
   Message,
@@ -8,28 +7,40 @@ import {
   TextChannel,
   ThreadChannel,
   VoiceChannel,
+  type GuildTextBasedChannel,
+  type Webhook,
+  type WebhookMessageCreateOptions,
 } from "discord.js";
 
-export async function getCreateWebhook(
-  channel:
-    | TextChannel
-    | VoiceChannel
-    | NewsChannel
-    | ForumChannel
-    | ThreadChannel
-    | StageChannel
-) {
+export function getWebhook(
+  channel: GuildTextBasedChannel,
+  create?: false
+): Promise<Webhook | undefined>;
+
+export function getWebhook(
+  channel: GuildTextBasedChannel,
+  create: true
+): Promise<Webhook>;
+
+export async function getWebhook(
+  channel: GuildTextBasedChannel,
+  create?: boolean
+): Promise<Webhook | undefined> {
+  if (isThreadChannel(channel) && !channel.parent)
+    throw new Error("Thread channel has no parent...");
+
   const textChannel:
     | TextChannel
     | VoiceChannel
     | NewsChannel
     | ForumChannel
-    | StageChannel =
-    channel instanceof ThreadChannel ? channel.parent! : channel;
+    | StageChannel = isThreadChannel(channel) ? channel.parent! : channel;
 
   const webhooks = await textChannel.fetchWebhooks();
   const foundWebhook = webhooks.find((wh) => wh.token);
+
   if (foundWebhook) return foundWebhook;
+  if (!create) return;
 
   const user = textChannel.client.user;
   return textChannel.createWebhook({
@@ -43,7 +54,8 @@ export function messageToWebhookOptions(
 ): WebhookMessageCreateOptions {
   const { channel, content, author, member, attachments, tts } = message;
 
-  const avatarURL = member?.displayAvatarURL() || author.avatarURL() || "";
+  const avatarURL =
+    member?.displayAvatarURL() || author.avatarURL() || undefined;
   const username = member?.nickname || author.username;
 
   return {
@@ -52,6 +64,6 @@ export function messageToWebhookOptions(
     content,
     files: Array.from(attachments.values()),
     tts,
-    threadId: channel.isThread() ? channel.parentId || undefined : undefined,
+    threadId: channel.isThread() ? channel.parentId ?? undefined : undefined,
   };
 }

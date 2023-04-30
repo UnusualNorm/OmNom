@@ -86,7 +86,11 @@ async function fetchAndRetryIfNecessary(
 export class KoboldAIHorde {
   apiKey: string;
   defaultOptions: JobCreateOptions;
-  constructor(apiKey?: string, options?: Partial<JobCreateOptions>) {
+  constructor(
+    apiKey?: string,
+    options?: Partial<JobCreateOptions>,
+    params?: Partial<JobCreateOptions["params"]>
+  ) {
     this.apiKey = apiKey || "0000000000";
     this.defaultOptions = {
       prompt: "",
@@ -106,6 +110,7 @@ export class KoboldAIHorde {
         top_p: 0.9,
         typical: 1,
         singleline: true,
+        ...params,
       },
       workers: [],
       ...options,

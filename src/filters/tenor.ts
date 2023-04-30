@@ -107,17 +107,16 @@ async function getGif(query: string): Promise<string | undefined> {
 }
 
 export const GifFilter: Filter = {
-  name: "gif",
-  friendlyName: "GIF",
+  id: "gif",
+  name: "GIF",
   description: "L + Ratio",
 
   run: async (message) => ({
     ...message,
     content: message.content
-      ? (await getGif(message.content)) || "https://tenor.com/bV6ei.gif"
-      : "",
+      ? (await getGif(message.content)) || message.content
+      : message.content,
   }),
 
-  preview: async (text) =>
-    (await getGif(text)) || "https://tenor.com/bV6ei.gif",
+  preview: async (text) => (await getGif(text)) || text,
 };

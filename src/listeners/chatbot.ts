@@ -10,17 +10,20 @@ import {
 } from "discord.js";
 import env from "../env/bot.js";
 import { KoboldAIHorde, type JobStatusResponse } from "../utils/kobold.js";
-import { getCreateWebhook } from "../utils/webhook.js";
+import { getWebhook } from "../utils/webhook.js";
 import emojiRegex from "emoji-regex";
-
-const models = env.CHATBOT_MODELS.split(",");
-const memoryTimeLimit = env.CHATBOT_MEMORY * 60000;
-const memoryLengthLimit = Math.min(env.CHATBOT_LIMIT, 100);
+import { EmojiRegex } from "@sapphire/discord.js-utilities";
 
 const jobRequestCancels = new Map<string, () => void>();
-const horde = new KoboldAIHorde(env.KOBOLD_KEY, {
-  models,
-});
+const horde = new KoboldAIHorde(
+  env.KOBOLD_KEY,
+  {
+    models: env.CHATBOT_MODELS.split(","),
+  },
+  {
+    singleline: env.CHATBOT_SINGLELINE,
+  }
+);
 
 function wcMatch(rule: string, text: string) {
   return new RegExp(
@@ -118,12 +121,12 @@ export class ChatbotListener extends Listener {
     return prompt;
   }
 
-  private parseInput(message: string) {
+  private parseInput(message: string): [string, ...string[]] {
     // The AI likes to impersonate the user, remember to check for that
     const lines = message.trim().split("\n");
 
     // The first line is always the bot's response
-    const botLine = lines.splice(0, 1)[0] || "...";
+    const botLine = lines.splice(0, 1)[0] as string;
 
     // Get all lines that start with the bot's name
     let foundImpersonation = false;
@@ -154,7 +157,11 @@ export class ChatbotListener extends Listener {
           ?.has(PermissionFlagsBits.AddReactions))
     ) {
       jobRequestCancels.get(message.channel.id)?.();
-      const isEmoji = emojiRegex().test(env.CHATBOT_REACTION);
+
+      const isEmoji =
+        emojiRegex().test(env.CHATBOT_REACTION) ||
+        EmojiRegex.test(env.CHATBOT_REACTION);
+
       return isEmoji
         ? message.react(env.CHATBOT_REACTION)
         : message.reply(env.CHATBOT_REACTION);
@@ -168,21 +175,18 @@ export class ChatbotListener extends Listener {
       return;
 
     // Get the chatbot config for this channel
-    const chatbotConfig = !message.channel.isDMBased()
-      ? await this.container.client
-          .db("chatbots")
-          .select()
-          .where("id", message.channel.id)
-          .first()
-      : undefined;
-
-    // Insert default values into the chatbot config
-    const chatbotName =
-      chatbotConfig?.name || this.container.client.user?.username || "Robot";
-    const chatbotAvatar = chatbotConfig?.avatar;
-    const chatbotKeywords = chatbotConfig?.keywords?.split(",") ?? [];
-    const chatbotPersona = chatbotConfig?.persona ?? env.CHATBOT_PERSONA;
-    const chatbotHello = chatbotConfig?.hello ?? env.CHATBOT_HELLO;
+    const chatbotConfig = {
+      name: this.container.client.user?.username || "Robot",
+      persona: env.CHATBOT_PERSONA,
+      hello: env.CHATBOT_HELLO,
+      ...(!message.channel.isDMBased()
+        ? await this.container.client
+            .db("chatbots")
+            .select()
+            .where("id", message.channel.id)
+            .first()
+        : undefined),
+    };
 
     // Determine if we need to use webhooks (if we need to change the name or avatar)
     const useWebhooks =
@@ -216,14 +220,15 @@ export class ChatbotListener extends Listener {
       // If we're being directly mentioned, continue
       if (
         useWebhooks
-          ? reference?.webhookId && reference.author.username == chatbotName
+          ? reference?.webhookId &&
+            reference.author.username == chatbotConfig.name
           : reference?.author.id == this.container.client.id
       )
         break runCheck;
 
       // This should support wildcard keywords
-      const includesKeyword = chatbotKeywords.some((keyword) =>
-        wcMatch(keyword, message.content)
+      const includesKeyword = (chatbotConfig?.keywords?.split(",") ?? []).some(
+        (keyword) => wcMatch(keyword, message.content)
       );
 
       // If the message contains a keyword, continue
@@ -256,9 +261,9 @@ export class ChatbotListener extends Listener {
     await message.channel.sendTyping();
 
     let messages: Message[];
-    if (message.channel.messages.cache.size >= memoryLengthLimit)
+    if (message.channel.messages.cache.size >= env.CHATBOT_LIMIT)
       messages = message.channel.messages.cache.first(
-        memoryLengthLimit
+        env.CHATBOT_LIMIT
       ) as Message[];
     // Otherwise, fetch the messages
     // TODO: Add a flag to show that this channel just has a small amount of messages
@@ -267,7 +272,7 @@ export class ChatbotListener extends Listener {
       messages = [
         ...(
           await message.channel.messages.fetch({
-            limit: memoryLengthLimit,
+            limit: Math.min(env.CHATBOT_LIMIT, 100),
           })
         ).values(),
       ];
@@ -282,7 +287,7 @@ export class ChatbotListener extends Listener {
 
     // Filter the messages that our bot should not remember
     messages = messages.filter(
-      (m) => Date.now() - m.createdAt.getTime() <= memoryTimeLimit
+      (m) => Date.now() - m.createdAt.getTime() <= env.CHATBOT_MEMORY * 60000
     );
 
     // If any messages are the limiter, we need to remove all previous messages
@@ -299,16 +304,16 @@ export class ChatbotListener extends Listener {
     const firstMessageIndex = messages.findIndex(
       (m) =>
         !(useWebhooks
-          ? m.webhookId && m.author.username == chatbotName
+          ? m.webhookId && m.author.username == chatbotConfig.name
           : m.author.id == this.container.client.id)
     );
     if (firstMessageIndex >= 0) messages = messages.slice(firstMessageIndex);
 
     // Construct the prompt
     const prompt = await this.createPrompt(
-      chatbotName,
-      chatbotPersona,
-      chatbotHello,
+      chatbotConfig.name,
+      chatbotConfig.persona,
+      chatbotConfig.hello,
       messages
     );
 
@@ -359,19 +364,18 @@ export class ChatbotListener extends Listener {
     let webhook: Webhook | undefined;
     if (useWebhooks)
       if (message.channel.isThread()) {
-        if (!message.channel.parent) return;
         threadId = message.channel.id;
         // I don't know if this is just a type error, but maybe it is possible to have a thread without a parent?
         // Whatever, I separated that check at the beginning so I don't waste my time.
-        webhook = await getCreateWebhook(message.channel.parent);
-      } else webhook = await getCreateWebhook(message.channel);
+        webhook = await getWebhook(message.channel.parent!);
+      } else webhook = await getWebhook(message.channel);
 
     // Send the messages
     for (const botMessage of botMessages)
       if (useWebhooks)
         await webhook?.send({
-          username: chatbotName,
-          avatarURL: chatbotAvatar,
+          username: chatbotConfig.name,
+          avatarURL: chatbotConfig.avatar,
           allowedMentions: {
             parse: [],
           },
