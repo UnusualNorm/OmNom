@@ -186,8 +186,8 @@ export class FilterCommand extends Subcommand {
         ephemeral: true,
       });
 
-    const filterName = interaction.options.getString("filter");
-    const filter = filters.find((filter) => filter.id == filterName);
+    const filterName = interaction.options.getString("filter", true);
+    const filter = filters.get(filterName);
     if (!filter)
       return interaction.reply({
         content: "Please supply a valid filter...",

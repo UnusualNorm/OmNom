@@ -5,7 +5,6 @@ import {
   NewsChannel,
   StageChannel,
   TextChannel,
-  ThreadChannel,
   VoiceChannel,
   type GuildTextBasedChannel,
   type Webhook,

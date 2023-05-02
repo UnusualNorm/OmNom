@@ -146,7 +146,12 @@ export class ChatbotListener extends Listener {
     if (message.partial) await message.fetch();
 
     // Do not run if the message is in a thread without a parent
-    if (message.channel.isThread() && !message.channel.parent) return;
+    if (
+      message.channel.isThread() &&
+      (!message.channel.parent ||
+        message.channel.parent.type == ChannelType.GuildForum)
+    )
+      return;
 
     // If the message is the limiter, respond accordingly
     if (
@@ -367,7 +372,9 @@ export class ChatbotListener extends Listener {
         threadId = message.channel.id;
         // I don't know if this is just a type error, but maybe it is possible to have a thread without a parent?
         // Whatever, I separated that check at the beginning so I don't waste my time.
-        webhook = await getWebhook(message.channel.parent!);
+
+        // @ts-ignore - Typescript type checker buggin' here or smth...
+        webhook = await getWebhook(message.channel.parentId!);
       } else webhook = await getWebhook(message.channel);
 
     // Send the messages
