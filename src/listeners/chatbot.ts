@@ -143,22 +143,17 @@ export class ChatbotListener extends Listener {
   }
 
   public async run(message: Message) {
+    if (message.webhookId || message.author.bot) return;
+
     if (message.partial) await message.fetch();
 
-    // Do not run if the message is in a thread without a parent
-    if (
-      message.channel.isThread() &&
-      (!message.channel.parent ||
-        message.channel.parent.type == ChannelType.GuildForum)
-    )
-      return;
+    if (message.channel.isThread() && !message.channel.parent) return;
 
-    // If the message is the limiter, respond accordingly
     if (
       message.content == env.CHATBOT_LIMITER &&
       (message.channel.type == ChannelType.DM ||
         message.channel
-          .permissionsFor(this.container.client.user?.id || "")
+          .permissionsFor(this.container.client.id || "")
           ?.has(PermissionFlagsBits.AddReactions))
     ) {
       jobRequestCancels.get(message.channel.id)?.();
@@ -172,25 +167,19 @@ export class ChatbotListener extends Listener {
         : message.reply(env.CHATBOT_REACTION);
     }
 
-    // Do not run if the message is from a webhook or the bot
-    if (
-      message.webhookId ||
-      message.author.id == this.container.client.user?.id
-    )
-      return;
+    const chatbotConfigOverrides = !message.channel.isDMBased()
+      ? await this.container.client
+          .db("chatbots")
+          .select()
+          .where("id", message.channel.id)
+          .first()
+      : undefined;
 
-    // Get the chatbot config for this channel
     const chatbotConfig = {
       name: this.container.client.user?.username || "Robot",
       persona: env.CHATBOT_PERSONA,
       hello: env.CHATBOT_HELLO,
-      ...(!message.channel.isDMBased()
-        ? await this.container.client
-            .db("chatbots")
-            .select()
-            .where("id", message.channel.id)
-            .first()
-        : undefined),
+      ...chatbotConfigOverrides,
     };
 
     // Determine if we need to use webhooks (if we need to change the name or avatar)
@@ -201,18 +190,16 @@ export class ChatbotListener extends Listener {
     if (
       message.channel.type != ChannelType.DM &&
       !message.channel
-        .permissionsFor(this.container.client.user?.id || "")
+        .permissionsFor(this.container.client.id || "")
         ?.has(
           [
             PermissionFlagsBits.SendMessages,
             PermissionFlagsBits.ReadMessageHistory,
-            // We also need ManageWebhooks if we are using webhooks
           ].concat(useWebhooks ? PermissionFlagsBits.ManageWebhooks : [])
         )
     )
       return;
 
-    // Get message reference (reply)
     const reference = message.reference ? await message.fetchReference() : null;
 
     runCheck: if (
@@ -221,13 +208,14 @@ export class ChatbotListener extends Listener {
     )
       break runCheck;
     // If we're a set chatbot, check if the message includes keywords
-    else if (chatbotConfig) {
+    else if (chatbotConfigOverrides) {
       // If we're being directly mentioned, continue
       if (
-        useWebhooks
+        message.mentions.has(this.container.client.id || "") ||
+        (useWebhooks
           ? reference?.webhookId &&
             reference.author.username == chatbotConfig.name
-          : reference?.author.id == this.container.client.id
+          : reference?.author.id == this.container.client.id)
       )
         break runCheck;
 
@@ -253,8 +241,8 @@ export class ChatbotListener extends Listener {
 
       // If we have been mentioned, continue
       if (
-        message.mentions.has(this.container.client.user?.id || "") ||
-        reference?.author.id == this.container.client.user?.id
+        message.mentions.has(this.container.client.id || "") ||
+        reference?.author.id == this.container.client.id
       )
         break runCheck;
 
@@ -370,11 +358,7 @@ export class ChatbotListener extends Listener {
     if (useWebhooks)
       if (message.channel.isThread()) {
         threadId = message.channel.id;
-        // I don't know if this is just a type error, but maybe it is possible to have a thread without a parent?
-        // Whatever, I separated that check at the beginning so I don't waste my time.
-
-        // @ts-ignore - Typescript type checker buggin' here or smth...
-        webhook = await getWebhook(message.channel.parentId!);
+        webhook = await getWebhook(message.channel);
       } else webhook = await getWebhook(message.channel);
 
     // Send the messages
