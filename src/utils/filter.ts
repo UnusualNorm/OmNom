@@ -93,12 +93,12 @@ export async function getAppliedFilters(
 
 export function hasPermissions(channel: GuildTextBasedChannel): boolean {
   return (
-    !channel
-      .permissionsFor(container.client.user?.id ?? "")
-      ?.has(PermissionFlagsBits.ManageWebhooks) ||
-    !channel
-      .permissionsFor(container.client.user?.id ?? "")
-      ?.has(PermissionFlagsBits.ManageMessages)
+    channel
+      .permissionsFor(container.client.id ?? "")
+      ?.has([
+        PermissionFlagsBits.ManageMessages,
+        PermissionFlagsBits.ManageWebhooks,
+      ]) ?? false
   );
 }
 

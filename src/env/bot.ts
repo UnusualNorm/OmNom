@@ -19,4 +19,5 @@ export default {
   CHATBOT_LIMITER: env.get("CHATBOT_LIMITER").asString() ?? "<CLEAR>",
   CHATBOT_REACTION: env.get("CHATBOT_REACTION").asString() ?? "⌛",
   CHATBOT_SINGLELINE: env.get("CHATBOT_SINGLELINE").asBool() ?? true,
+  CHATBOT_FETCH_ONLY: env.get("CHATBOT_FETCH_ONLY").asBool() ?? false,
 };

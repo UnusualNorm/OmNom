@@ -254,7 +254,10 @@ export class ChatbotListener extends Listener {
     await message.channel.sendTyping();
 
     let messages: Message[];
-    if (message.channel.messages.cache.size >= env.CHATBOT_LIMIT)
+    if (
+      !env.CHATBOT_FETCH_ONLY &&
+      message.channel.messages.cache.size >= env.CHATBOT_LIMIT
+    )
       messages = message.channel.messages.cache.first(
         env.CHATBOT_LIMIT
       ) as Message[];
