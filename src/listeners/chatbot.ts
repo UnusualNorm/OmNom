@@ -93,17 +93,17 @@ export class ChatbotListener extends Listener {
     hello: string,
     memory: Message[]
   ) {
-    const helloName = memory.find((message) => message.author.username !== name)
-      ?.author.username;
+    // const helloName = memory.find((message) => message.author.username !== name)
+    //   ?.author.username;
 
     // If we have a persona, add it to the prompt
-    let prompt = persona ? `${name}'s Persona: ${persona}\n` : "";
+    let prompt = persona ? `${name}'s Persona: ${name} is ${persona}.\n` : "";
 
     // The docs say to add this as a delimiter
     prompt += "<START>\n";
 
     // If we have a hello message, add it to the prompt
-    !hello || (prompt += `${helloName || "User"}: Hello ${name}!\n`);
+    // !hello || (prompt += `${helloName || "User"}: Hello ${name}!\n`);
     !hello || (prompt += `${name}: ${hello}\n`);
 
     // Add all the messages in the memory to the prompt
@@ -184,7 +184,8 @@ export class ChatbotListener extends Listener {
 
     // Determine if we need to use webhooks (if we need to change the name or avatar)
     const useWebhooks =
-      message.inGuild() && (!!chatbotConfig?.name || !!chatbotConfig?.avatar);
+      message.inGuild() &&
+      (!!chatbotConfigOverrides?.name || !!chatbotConfigOverrides?.avatar);
 
     // Do not run if the bot does not have the required permissions, we do not need to worry if we're in a DM
     if (

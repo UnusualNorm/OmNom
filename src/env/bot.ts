@@ -6,10 +6,10 @@ export default {
   TENOR_KEY: env.get("TENOR_KEY").asString(),
   KOBOLD_KEY: env.get("KOBOLD_KEY").asString() ?? "0000000000",
   CHATBOT_PERSONA:
-    env.get("CHATBOT_PERSONA").asString() ?? "A friendly AI chatbot.",
+    env.get("CHATBOT_PERSONA").asString() ??
+    "a highly intelligent language model trained to comply with user requests",
   CHATBOT_HELLO:
-    env.get("CHATBOT_HELLO").asString() ??
-    "Hey there! How can I help you today?",
+    env.get("CHATBOT_HELLO").asString() ?? "Hello! How may I help you today?",
   CHATBOT_MEMORY: env.get("CHATBOT_MEMORY").asIntPositive() ?? Infinity,
   CHATBOT_LIMIT: env.get("CHATBOT_LIMIT").asIntPositive() ?? Infinity,
   // A comma separated list of models to use
