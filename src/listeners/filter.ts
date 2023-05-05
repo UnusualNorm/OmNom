@@ -4,7 +4,7 @@ import { Message } from "discord.js";
 import { getWebhook, messageToWebhookOptions } from "../utils/webhook.js";
 import {
   applyFilters,
-  getAppliedFilters,
+  getFiltersToApply,
   hasPermissions,
 } from "../utils/filter.js";
 
@@ -22,7 +22,7 @@ export class FilterListener extends Listener {
 
     const webhook = await getWebhook(message.channel, true);
 
-    const filters = await getAppliedFilters(
+    const filters = await getFiltersToApply(
       message.guildId,
       message.channelId,
       message.author.id,

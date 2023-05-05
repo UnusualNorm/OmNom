@@ -22,7 +22,7 @@ export function serializeFilterEntries(entries: FilterEntry[]): Filter[] {
     .filter((filter) => !!filter) as Filter[];
 }
 
-export async function getAllAppliedFilters(
+export async function getAppliedFilters(
   guildId: string,
   channelId?: string,
   userId?: string,
@@ -73,13 +73,13 @@ export function removeDuplicateFilterEntries(
   return [...uniqueEntries.values()];
 }
 
-export async function getAppliedFilters(
+export async function getFiltersToApply(
   guildId: string,
   channelId?: string,
   userId?: string,
   roleIds: string[] = []
 ): Promise<Filter[]> {
-  const filterEntries = await getAllAppliedFilters(
+  const filterEntries = await getAppliedFilters(
     guildId,
     channelId,
     userId,

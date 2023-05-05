@@ -13,42 +13,25 @@ import { KoboldAIHorde, type JobStatusResponse } from "../utils/kobold.js";
 import { getWebhook } from "../utils/webhook.js";
 import emojiRegex from "emoji-regex";
 import { EmojiRegex } from "@sapphire/discord.js-utilities";
+import { wcMatch } from "../utils/regex.js";
+import { replaceAsync } from "../utils/string.js";
 
 const jobRequestCancels = new Map<string, () => void>();
 const horde = new KoboldAIHorde(
   env.KOBOLD_KEY,
   {
     models: env.CHATBOT_MODELS.split(","),
+    trusted_workers: env.CHATBOT_TRUSTED_ONLY,
   },
   {
-    singleline: env.CHATBOT_SINGLELINE,
+    singleline: env.CHATBOT_SINGLE_LINE,
+    temperature: env.CHATBOT_TEMPERATURE,
   }
 );
 
-function wcMatch(rule: string, text: string) {
-  return new RegExp(
-    "^" +
-      rule
-        .replaceAll(/([.+?^=!:${}()|[\]/\\])/g, "\\$1")
-        .replaceAll("*", "(.*)") +
-      "$"
-  ).test(text);
-}
-
-async function replaceAsync(
-  str: string,
-  regex: RegExp,
-  asyncFn: (match: string, ...args: unknown[]) => Promise<string>
-) {
-  const promises: Promise<string>[] = [];
-  str.replace(regex, (match, ...args) => {
-    const promise = asyncFn(match, ...args);
-    promises.push(promise);
-    return match;
-  });
-  const data = await Promise.all(promises);
-  return str.replace(regex, () => data.shift() || "");
-}
+const forgetReactionIsEmoji =
+  emojiRegex().test(env.CHATBOT_FORGET_REACTION) ||
+  EmojiRegex.test(env.CHATBOT_FORGET_REACTION);
 
 @ApplyOptions<Listener.Options>({
   name: "chatbot",
@@ -61,7 +44,7 @@ export class ChatbotListener extends Listener {
         // Make all emojis :emoji: instead of <:emoji:id>
         message.content
           // Make it single-line
-          .replaceAll("\n", " ")
+          .replaceAll(env.CHATBOT_SINGLE_LINE ? "\n" : " ", " ")
           // Make all emojis :emoji:
           .replaceAll(
             /<(?:(?<animated>a)?:(?<name>\w{2,32}):)?(?<id>\d{17,21})>/g,
@@ -89,32 +72,41 @@ export class ChatbotListener extends Listener {
 
   async createPrompt(
     name: string,
-    persona: string,
-    hello: string,
-    memory: Message[]
+    persona?: string,
+    greeting?: string,
+    messages?: Message[]
   ) {
-    // const helloName = memory.find((message) => message.author.username !== name)
-    //   ?.author.username;
+    let prompt = "";
 
     // If we have a persona, add it to the prompt
-    let prompt = persona ? `${name}'s Persona: ${name} is ${persona}.\n` : "";
+    if (persona !== "")
+      // ${name}'s Persona: ${persona}
+      prompt += `${name}'s Persona: ${
+        persona ??
+        // Default value:
+        `${name} is a highly intelligent language model trained to comply with user requests.`
+      }\n`;
 
     // The docs say to add this as a delimiter
     prompt += "<START>\n";
 
-    // If we have a hello message, add it to the prompt
-    // !hello || (prompt += `${helloName || "User"}: Hello ${name}!\n`);
-    !hello || (prompt += `${name}: ${hello}\n`);
+    // If we have a greeting, add it to the prompt
+    // ${name}: ${greeting}
+    if (greeting) prompt += `${name}: ${greeting}\n`;
 
-    // Add all the messages in the memory to the prompt
-    prompt += (
-      await Promise.all(
-        memory.map(
-          async (message) =>
-            `${message.author.username}: ${await this.parseUserInput(message)}`
+    // If we have message history, add the messages to the prompt
+    if (messages)
+      prompt += (
+        await Promise.all(
+          messages.map(
+            async (message) =>
+              // ${username}: ${message}
+              `${message.author.username}: ${await this.parseUserInput(
+                message
+              )}`
+          )
         )
-      )
-    ).join("\n");
+      ).join("\n");
 
     // Add the chat bot's name to the prompt
     prompt += `\n${name}:`;
@@ -150,7 +142,7 @@ export class ChatbotListener extends Listener {
     if (message.channel.isThread() && !message.channel.parent) return;
 
     if (
-      message.content == env.CHATBOT_LIMITER &&
+      message.content == env.CHATBOT_FORGET_COMMAND &&
       (message.channel.type == ChannelType.DM ||
         message.channel
           .permissionsFor(this.container.client.id || "")
@@ -158,13 +150,9 @@ export class ChatbotListener extends Listener {
     ) {
       jobRequestCancels.get(message.channel.id)?.();
 
-      const isEmoji =
-        emojiRegex().test(env.CHATBOT_REACTION) ||
-        EmojiRegex.test(env.CHATBOT_REACTION);
-
-      return isEmoji
-        ? message.react(env.CHATBOT_REACTION)
-        : message.reply(env.CHATBOT_REACTION);
+      return forgetReactionIsEmoji
+        ? message.react(env.CHATBOT_FORGET_REACTION)
+        : message.reply(env.CHATBOT_FORGET_REACTION);
     }
 
     const chatbotConfigOverrides = !message.channel.isDMBased()
@@ -178,7 +166,7 @@ export class ChatbotListener extends Listener {
     const chatbotConfig = {
       name: this.container.client.user?.username || "Robot",
       persona: env.CHATBOT_PERSONA,
-      hello: env.CHATBOT_HELLO,
+      hello: env.CHATBOT_GREETING,
       ...chatbotConfigOverrides,
     };
 
@@ -257,10 +245,10 @@ export class ChatbotListener extends Listener {
     let messages: Message[];
     if (
       !env.CHATBOT_FETCH_ONLY &&
-      message.channel.messages.cache.size >= env.CHATBOT_LIMIT
+      message.channel.messages.cache.size >= env.CHATBOT_MEMORY_LIMIT
     )
       messages = message.channel.messages.cache.first(
-        env.CHATBOT_LIMIT
+        env.CHATBOT_MEMORY_LIMIT
       ) as Message[];
     // Otherwise, fetch the messages
     // TODO: Add a flag to show that this channel just has a small amount of messages
@@ -269,7 +257,7 @@ export class ChatbotListener extends Listener {
       messages = [
         ...(
           await message.channel.messages.fetch({
-            limit: Math.min(env.CHATBOT_LIMIT, 100),
+            limit: Math.min(env.CHATBOT_MEMORY_LIMIT, 100),
           })
         ).values(),
       ];
@@ -284,13 +272,16 @@ export class ChatbotListener extends Listener {
 
     // Filter the messages that our bot should not remember
     messages = messages.filter(
-      (m) => Date.now() - m.createdAt.getTime() <= env.CHATBOT_MEMORY * 60000
+      (m) =>
+        Date.now() - m.createdAt.getTime() <=
+        env.CHATBOT_MEMORY_DURATION * 60000
     );
 
     // If any messages are the limiter, we need to remove all previous messages
     const limiterIndex = messages.findIndex(
-      (m) => m.content == env.CHATBOT_LIMITER
+      (m) => m.content == env.CHATBOT_FORGET_COMMAND
     );
+
     if (limiterIndex >= 0) messages = messages.slice(0, limiterIndex);
 
     // createPrompt expects the most recent message to be last,
@@ -346,7 +337,31 @@ export class ChatbotListener extends Listener {
       if (cancelled) return;
 
       // Get the job
-      job = await horde.getJob(jobId);
+      let resolved = false;
+      job = await Promise.race<JobStatusResponse>([
+        // Get the job, when we get it, tell our typing loop to stop
+        horde
+          .getJob(jobId)
+          .then((job) => {
+            resolved = true;
+            return job;
+          })
+          // TODO: Figure out if we even need to catch this
+          .catch((err) => {
+            resolved = true;
+            throw err;
+          }),
+        // Continue typing until we get a response
+        new Promise(() => {
+          const interval = setInterval((resolve) => {
+            if (resolved) {
+              clearInterval(interval);
+              resolve(undefined);
+            } else if (cancelled) clearInterval(interval);
+            else message.channel.sendTyping();
+          }, 1500);
+        }),
+      ]);
 
       // If the job failed, return
       if (!job.is_possible || job.faulted) return;
