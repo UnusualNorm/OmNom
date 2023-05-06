@@ -5,6 +5,8 @@ COPY . .
 
 RUN yarn install --immutable
 
+RUN rm node_modules/.prisma
+RUN npx prisma generate
 RUN yarn build
 
 FROM node:18
