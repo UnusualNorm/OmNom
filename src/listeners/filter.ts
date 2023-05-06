@@ -31,7 +31,7 @@ export class FilterListener extends Listener {
 
     if (filters.length == 0) return;
 
-    const filteredMessage = applyFilters(
+    const filteredMessage = await applyFilters(
       messageToWebhookOptions(message),
       filters
     );
