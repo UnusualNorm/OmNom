@@ -55,20 +55,22 @@ export class ChatbotListener extends Listener {
     }
 
     const chatbotConfigOverrides = message.inGuild()
-      ? await this.container.client
-          .db("chatbots")
-          .select()
-          .where("id", message.channel.id)
-          .first()
+      ? await this.container.client.db.chatbot.findUnique({
+          where: {
+            id: message.channel.id,
+          },
+        })
       : // If we're not in a guild, we're a global chatbot, don't override anything
         undefined;
 
     const chatbotConfig = {
-      name: this.container.client.user?.username || "Robot",
+      name: this.container.client.user?.username,
       persona: env.CHATBOT_PERSONA,
-      hello: env.CHATBOT_GREETING,
+      greeting: env.CHATBOT_GREETING,
       ...chatbotConfigOverrides,
     };
+
+    if (!chatbotConfig.name) chatbotConfig.name = "Robot";
 
     // Determine if we need to use webhooks (if we need to change the name or avatar)
     const useWebhooks =
@@ -116,11 +118,12 @@ export class ChatbotListener extends Listener {
       if (includesKeyword) break runCheck;
       else return;
     } else {
-      const globalChatbot = await this.container.client
-        .db("global_chatbots")
-        .select()
-        .where("id", message.channel.guildId)
-        .first();
+      const globalChatbot =
+        await this.container.client.db.globalChatbot.findUnique({
+          where: {
+            id: message.channel.guildId,
+          },
+        });
 
       // If the global chatbot is not enabled, stop
       if (!globalChatbot?.enabled) return;
@@ -193,8 +196,8 @@ export class ChatbotListener extends Listener {
     // Construct the prompt
     const prompt = await createPrompt(
       chatbotConfig.name,
-      chatbotConfig.persona,
-      chatbotConfig.hello,
+      chatbotConfig.persona ?? undefined,
+      chatbotConfig.greeting ?? undefined,
       messages
     );
 
@@ -276,7 +279,7 @@ export class ChatbotListener extends Listener {
       if (useWebhooks)
         await webhook?.send({
           username: chatbotConfig.name,
-          avatarURL: chatbotConfig.avatar,
+          avatarURL: chatbotConfig.avatar ?? undefined,
           allowedMentions: {
             parse: [],
           },

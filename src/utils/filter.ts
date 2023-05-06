@@ -1,12 +1,12 @@
 import { container } from "@sapphire/framework";
 import filters from "../filters.js";
 import type { Filter } from "../types/filter.js";
-import type { Filter as FilterEntry } from "knex/types/tables";
 import {
   PermissionFlagsBits,
   type GuildTextBasedChannel,
   type WebhookMessageCreateOptions,
 } from "discord.js";
+import type { Filter as FilterEntry } from "@prisma/client";
 
 const filterOrder = ["user", "role", "channel", "guild"];
 
@@ -28,36 +28,22 @@ export async function getAppliedFilters(
   userId?: string,
   roleIds: string[] = []
 ): Promise<FilterEntry[]> {
-  let query = container.client
-    .db("filters")
-    .select()
-    .orWhere((builder) =>
-      builder
-        .where("id", guildId)
-        .where("guild", guildId)
-        .where("type", "guild")
-    )
-    .orWhere((builder) =>
-      builder
-        .where("id", channelId)
-        .where("guild", guildId)
-        .where("type", "channel")
-    )
-    .orWhere((builder) =>
-      builder.where("id", userId).where("guild", guildId).where("type", "user")
-    );
+  const filters = await container.client.db.filter.findMany({
+    where: {
+      OR: [
+        { id: guildId, guild: guildId, type: "guild" },
+        { id: channelId, guild: guildId, type: "channel" },
+        { id: userId, guild: guildId, type: "user" },
+        ...roleIds.map((roleId) => ({
+          id: roleId,
+          guild: guildId,
+          type: "role",
+        })),
+      ],
+    },
+  });
 
-  roleIds.forEach(
-    (roleId) =>
-      (query = query.orWhere((builder) =>
-        builder
-          .where("id", roleId)
-          .where("guild", guildId)
-          .where("type", "role")
-      ))
-  );
-
-  return await query;
+  return filters;
 }
 
 export function removeDuplicateFilterEntries(

@@ -58,11 +58,13 @@ export class ImageCommand extends Subcommand {
     await interaction.deferReply();
 
     try {
-      const safetyConfig = await this.container.client
-        .db("image_safety")
-        .select()
-        .where("id", interaction.guildId)
-        .first();
+      const safetyConfig = interaction.inGuild()
+        ? await this.container.client.db.imageSafety.findUnique({
+            where: {
+              id: interaction.guildId,
+            },
+          })
+        : undefined;
 
       const results = await gis(search, {
         safe: safetyConfig?.safe ?? true ? "on" : "off",
@@ -93,7 +95,7 @@ export class ImageCommand extends Subcommand {
 
     if (!interaction.inGuild())
       return interaction.reply({
-        content: `This command can only be used in a guild!`,
+        content: "This command can only be used in a guild!",
         ephemeral: true,
       });
 
@@ -103,14 +105,18 @@ export class ImageCommand extends Subcommand {
 
     try {
       // Update the image safety. Insert if it doesn't exist.
-      await this.container.client
-        .db("image_safety")
-        .insert({
+      await this.container.client.db.imageSafety.upsert({
+        where: {
+          id: interaction.guildId,
+        },
+        create: {
           id: interaction.guildId,
           safe: enabled,
-        })
-        .onConflict("id")
-        .merge();
+        },
+        update: {
+          safe: enabled,
+        },
+      });
 
       // Send a confirmation message.
       return interaction.editReply({

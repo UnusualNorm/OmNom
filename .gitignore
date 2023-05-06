@@ -105,6 +105,7 @@ dist
 
 # Local Database
 data.db
+data.db-journal
 
 # Yarn V2
 .pnp.*

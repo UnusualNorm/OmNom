@@ -1,0 +1,39 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../data.db"
+}
+
+model Filter {
+  id     String
+  guild  String
+  type   String
+  filter String
+
+  @@id([id, guild, type])
+}
+
+model Chatbot {
+  id      String @id @unique
+  name    String?
+  avatar  String?
+  persona String?
+  greeting   String?
+  keywords String?
+}
+
+model GlobalChatbot {
+  id      String @id @unique
+  enabled Boolean
+}
+
+model ImageSafety {
+  id   String @id @unique
+  safe Boolean
+}

@@ -4,7 +4,9 @@ import { SapphireClient } from "@sapphire/framework";
 import { ClusterClient, type ClusterClientData } from "discord-hybrid-sharding";
 import hosting from "discord-cross-hosting";
 import env from "./env/bot.js";
-import db from "./utils/db.js";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 const { Shard } = hosting;
 let clientInitData: ClusterClientData | undefined;
@@ -45,7 +47,7 @@ client.on("ready", () => {
   });
 });
 
-client.db = db;
+client.db = prisma;
 if (clientInitData) {
   client.cluster = new ClusterClient(client);
   client.machine = new Shard(client.cluster);

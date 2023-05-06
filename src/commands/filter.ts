@@ -220,18 +220,23 @@ export class FilterCommand extends Subcommand {
     });
 
     try {
-      await this.container.client
-        .db("filters")
-        .delete()
-        .where("id", target.id)
-        .where("guild", interaction.guildId)
-        .where("type", targetType);
-
-      await this.container.client.db("filters").insert({
-        id: target.id,
-        guild: interaction.guildId,
-        type: targetType,
-        filter: filterName as string,
+      await this.container.client.db.filter.upsert({
+        where: {
+          id_guild_type: {
+            id: target.id,
+            guild: interaction.guildId,
+            type: targetType,
+          },
+        },
+        create: {
+          id: target.id,
+          guild: interaction.guildId,
+          type: targetType,
+          filter: filterName,
+        },
+        update: {
+          filter: filterName,
+        },
       });
 
       return interaction.editReply(
@@ -278,12 +283,15 @@ export class FilterCommand extends Subcommand {
     });
 
     try {
-      const removed = await this.container.client
-        .db("filters")
-        .delete()
-        .where("id", target.id)
-        .where("guild", interaction.guildId)
-        .where("type", targetType);
+      const removed = await this.container.client.db.filter.delete({
+        where: {
+          id_guild_type: {
+            id: target.id,
+            guild: interaction.guildId,
+            type: targetType,
+          },
+        },
+      });
 
       if (!removed)
         return interaction.editReply(

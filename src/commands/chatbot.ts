@@ -54,9 +54,9 @@ export class ChatBotCommand extends Subcommand {
               )
               .addStringOption((builder) =>
                 builder
-                  .setName("hello")
+                  .setName("greeting")
                   .setDescription(
-                    "Taking the chatbot's persona into account, how would the chatbot respond to hello?"
+                    "Taking the chatbot's persona into account, how would the chatbot greet someone?"
                   )
               )
               .addStringOption((builder) =>
@@ -90,8 +90,8 @@ export class ChatBotCommand extends Subcommand {
                       value: "persona",
                     },
                     {
-                      name: "Hello",
-                      value: "hello",
+                      name: "greeting",
+                      value: "greeting",
                     },
                     {
                       name: "Keywords",
@@ -141,23 +141,27 @@ export class ChatBotCommand extends Subcommand {
     const name = interaction.options.getString("name") ?? undefined;
     const avatar = interaction.options.getString("avatar") ?? undefined;
     const persona = interaction.options.getString("persona") ?? undefined;
-    const hello = interaction.options.getString("hello") ?? undefined;
+    const greeting = interaction.options.getString("greeting") ?? undefined;
     const keywords = interaction.options.getString("keywords") ?? undefined;
 
     try {
       // Create the chatbot.
-      await this.container.client
-        .db("chatbots")
-        .insert({
+      const chatbot = {
+        id: interaction.channelId,
+        name: name ?? null,
+        avatar: avatar ?? null,
+        persona: persona ?? null,
+        greeting: greeting ?? null,
+        keywords: keywords ?? null,
+      };
+
+      await this.container.client.db.chatbot.upsert({
+        where: {
           id: interaction.channelId,
-          name,
-          avatar,
-          persona,
-          hello,
-          keywords,
-        })
-        .onConflict("id")
-        .merge();
+        },
+        create: chatbot,
+        update: chatbot,
+      });
 
       // Send a confirmation message.
       return interaction.editReply({
@@ -181,18 +185,22 @@ export class ChatBotCommand extends Subcommand {
 
     try {
       // Make sure this is a valid option.
-      if (!["name", "avatar", "persona", "hello", "keywords"].includes(option))
+      if (
+        !["name", "avatar", "persona", "greeting", "keywords"].includes(option)
+      )
         return interaction.editReply({
           content: `Invalid option!`,
         });
 
       // Update the chatbot.
-      const updated = await this.container.client
-        .db("chatbots")
-        .update({
+      const updated = await this.container.client.db.chatbot.update({
+        where: {
+          id: interaction.channelId,
+        },
+        data: {
           [option]: value,
-        })
-        .where("id", interaction.channelId);
+        },
+      });
 
       // If we didn't update anything, send an error message.
       if (!updated)
@@ -219,10 +227,11 @@ export class ChatBotCommand extends Subcommand {
 
     try {
       // Delete the chatbot.
-      const deleted = await this.container.client
-        .db("chatbots")
-        .delete()
-        .where("id", interaction.channelId);
+      const deleted = await this.container.client.db.chatbot.delete({
+        where: {
+          id: interaction.channelId,
+        },
+      });
 
       // If we didn't delete anything, send an error message.
       if (!deleted)
@@ -258,14 +267,18 @@ export class ChatBotCommand extends Subcommand {
 
     try {
       // Update the global chatbot. Insert if it doesn't exist.
-      await this.container.client
-        .db("global_chatbots")
-        .insert({
+      await this.container.client.db.globalChatbot.upsert({
+        where: {
+          id: interaction.guildId,
+        },
+        create: {
           id: interaction.guildId,
           enabled,
-        })
-        .onConflict("id")
-        .merge();
+        },
+        update: {
+          enabled,
+        },
+      });
 
       // Send a confirmation message.
       return interaction.editReply({
