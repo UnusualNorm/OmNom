@@ -12,7 +12,6 @@
     "dev:bot": "npm run build && npm run start:bot",
     "fmt": "prettier --write .",
     "lint": "eslint",
-    "prepare": "prisma generate",
     "start:server": "node dist/server.js",
     "start:cluster": "node dist/cluster.js",
     "start:bot": "node dist/bot.js"
