@@ -1,7 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Listener } from "@sapphire/framework";
 import {
-  ChannelType,
   Message,
   MessageFlags,
   MessageType,
@@ -11,10 +10,13 @@ import {
 import env from "../env/bot.js";
 import { KoboldAIHorde, type JobStatusResponse } from "../utils/kobold.js";
 import { getWebhook } from "../utils/webhook.js";
-import emojiRegex from "emoji-regex";
-import { EmojiRegex } from "@sapphire/discord.js-utilities";
 import { wcMatch } from "../utils/regex.js";
-import { replaceAsync } from "../utils/string.js";
+import {
+  createPrompt,
+  forgetReactionIsEmoji,
+  hasReactionPermissions,
+  parseBotInput,
+} from "../utils/chatbot.js";
 
 const jobRequestCancels = new Map<string, () => void>();
 const horde = new KoboldAIHorde(
@@ -29,111 +31,11 @@ const horde = new KoboldAIHorde(
   }
 );
 
-const forgetReactionIsEmoji =
-  emojiRegex().test(env.CHATBOT_FORGET_REACTION) ||
-  EmojiRegex.test(env.CHATBOT_FORGET_REACTION);
-
 @ApplyOptions<Listener.Options>({
   name: "chatbot",
   event: "messageCreate",
 })
 export class ChatbotListener extends Listener {
-  async parseUserInput(message: Message) {
-    return (
-      (await replaceAsync(
-        // Make all emojis :emoji: instead of <:emoji:id>
-        message.content
-          // Make it single-line
-          .replaceAll(env.CHATBOT_SINGLE_LINE ? "\n" : " ", " ")
-          // Make all emojis :emoji:
-          .replaceAll(
-            /<(?:(?<animated>a)?:(?<name>\w{2,32}):)?(?<id>\d{17,21})>/g,
-            (...args) => `:${args[2]}:`
-          ),
-        /<@!?(?<id>\d{17,20})>/g,
-        // Make all user mentions @User instead of <@id>
-        async (...args) => {
-          const id = args[1] as string;
-
-          // Fetch the user
-          const user = await this.container.client.users.fetch(id);
-
-          // If the user is not found, return a generic @
-          if (!user) return "@User";
-
-          // If the user is found, return their username
-          return `@${user.username}`;
-        }
-      )) +
-      // Add all attachments to the end
-      message.attachments.map((attachment) => ` ${attachment.url}`).join("")
-    );
-  }
-
-  async createPrompt(
-    name: string,
-    persona?: string,
-    greeting?: string,
-    messages?: Message[]
-  ) {
-    let prompt = "";
-
-    // If we have a persona, add it to the prompt
-    if (persona !== "")
-      // ${name}'s Persona: ${persona}
-      prompt += `${name}'s Persona: ${
-        persona ??
-        // Default value:
-        `${name} is a highly intelligent language model trained to comply with user requests.`
-      }\n`;
-
-    // The docs say to add this as a delimiter
-    prompt += "<START>\n";
-
-    // If we have a greeting, add it to the prompt
-    // ${name}: ${greeting}
-    if (greeting) prompt += `${name}: ${greeting}\n`;
-
-    // If we have message history, add the messages to the prompt
-    if (messages)
-      prompt += (
-        await Promise.all(
-          messages.map(
-            async (message) =>
-              // ${username}: ${message}
-              `${message.author.username}: ${await this.parseUserInput(
-                message
-              )}`
-          )
-        )
-      ).join("\n");
-
-    // Add the chat bot's name to the prompt
-    prompt += `\n${name}:`;
-    return prompt;
-  }
-
-  private parseInput(message: string): [string, ...string[]] {
-    // The AI likes to impersonate the user, remember to check for that
-    const lines = message.trim().split("\n");
-
-    // The first line is always the bot's response
-    const botLine = lines.splice(0, 1)[0] as string;
-
-    // Get all lines that start with the bot's name
-    let foundImpersonation = false;
-    const botLines = lines
-      .filter((line) => {
-        if (foundImpersonation) return false;
-        if (line.startsWith(`${this.name}: `)) return true;
-        foundImpersonation = true;
-        return false;
-      })
-      .map((line) => line.replace(`${this.name}: `, "").trim());
-
-    return [botLine, ...botLines];
-  }
-
   public async run(message: Message) {
     if (message.webhookId || message.author.bot) return;
 
@@ -141,13 +43,10 @@ export class ChatbotListener extends Listener {
 
     if (message.channel.isThread() && !message.channel.parent) return;
 
-    if (
-      message.content == env.CHATBOT_FORGET_COMMAND &&
-      (message.channel.type == ChannelType.DM ||
-        message.channel
-          .permissionsFor(this.container.client.id || "")
-          ?.has(PermissionFlagsBits.AddReactions))
-    ) {
+    // If we need to reset the bot's memory
+    if (message.content == env.CHATBOT_FORGET_COMMAND) {
+      if (!hasReactionPermissions(message.channel)) return;
+
       jobRequestCancels.get(message.channel.id)?.();
 
       return forgetReactionIsEmoji
@@ -155,13 +54,14 @@ export class ChatbotListener extends Listener {
         : message.reply(env.CHATBOT_FORGET_REACTION);
     }
 
-    const chatbotConfigOverrides = !message.channel.isDMBased()
+    const chatbotConfigOverrides = message.inGuild()
       ? await this.container.client
           .db("chatbots")
           .select()
           .where("id", message.channel.id)
           .first()
-      : undefined;
+      : // If we're not in a guild, we're a global chatbot, don't override anything
+        undefined;
 
     const chatbotConfig = {
       name: this.container.client.user?.username || "Robot",
@@ -172,20 +72,21 @@ export class ChatbotListener extends Listener {
 
     // Determine if we need to use webhooks (if we need to change the name or avatar)
     const useWebhooks =
+      // We shouldn't need to check if we're in a guild, but typescript is complaining
       message.inGuild() &&
-      (!!chatbotConfigOverrides?.name || !!chatbotConfigOverrides?.avatar);
+      (chatbotConfigOverrides?.name || chatbotConfigOverrides?.avatar);
 
-    // Do not run if the bot does not have the required permissions, we do not need to worry if we're in a DM
+    // Do not run if the bot does not have the required permissions
     if (
-      message.channel.type != ChannelType.DM &&
+      !message.inGuild() ||
       !message.channel
         .permissionsFor(this.container.client.id || "")
-        ?.has(
-          [
-            PermissionFlagsBits.SendMessages,
-            PermissionFlagsBits.ReadMessageHistory,
-          ].concat(useWebhooks ? PermissionFlagsBits.ManageWebhooks : [])
-        )
+        ?.has([
+          PermissionFlagsBits.ReadMessageHistory,
+          useWebhooks
+            ? PermissionFlagsBits.ManageWebhooks
+            : PermissionFlagsBits.SendMessages,
+        ])
     )
       return;
 
@@ -208,16 +109,12 @@ export class ChatbotListener extends Listener {
       )
         break runCheck;
 
-      // This should support wildcard keywords
       const includesKeyword = (chatbotConfig?.keywords?.split(",") ?? []).some(
         (keyword) => wcMatch(keyword, message.content)
       );
 
-      // If the message contains a keyword, continue
       if (includesKeyword) break runCheck;
-
-      // Otherwise, stop
-      return;
+      else return;
     } else {
       const globalChatbot = await this.container.client
         .db("global_chatbots")
@@ -234,12 +131,9 @@ export class ChatbotListener extends Listener {
         reference?.author.id == this.container.client.id
       )
         break runCheck;
-
-      // Otherwise, stop
-      return;
+      else return;
     }
 
-    // Start typing
     await message.channel.sendTyping();
 
     let messages: Message[];
@@ -250,7 +144,6 @@ export class ChatbotListener extends Listener {
       messages = message.channel.messages.cache.first(
         env.CHATBOT_MEMORY_LIMIT
       ) as Message[];
-    // Otherwise, fetch the messages
     // TODO: Add a flag to show that this channel just has a small amount of messages
     //       it currently always fetches messages if the cache is not full
     else
@@ -298,7 +191,7 @@ export class ChatbotListener extends Listener {
     if (firstMessageIndex >= 0) messages = messages.slice(firstMessageIndex);
 
     // Construct the prompt
-    const prompt = await this.createPrompt(
+    const prompt = await createPrompt(
       chatbotConfig.name,
       chatbotConfig.persona,
       chatbotConfig.hello,
@@ -338,22 +231,12 @@ export class ChatbotListener extends Listener {
 
       // Get the job
       let resolved = false;
-      job = await Promise.race<JobStatusResponse>([
+      job = await Promise.race<JobStatusResponse | undefined>([
         // Get the job, when we get it, tell our typing loop to stop
-        horde
-          .getJob(jobId)
-          .then((job) => {
-            resolved = true;
-            return job;
-          })
-          // TODO: Figure out if we even need to catch this
-          .catch((err) => {
-            resolved = true;
-            throw err;
-          }),
+        horde.getJob(jobId),
         // Continue typing until we get a response
-        new Promise(() => {
-          const interval = setInterval((resolve) => {
+        new Promise((resolve) => {
+          const interval = setInterval(() => {
             if (resolved) {
               clearInterval(interval);
               resolve(undefined);
@@ -361,16 +244,24 @@ export class ChatbotListener extends Listener {
             else message.channel.sendTyping();
           }, 1500);
         }),
-      ]);
+      ]).catch((err) => {
+        resolved = true;
+        this.container.logger.error(err);
+        return undefined;
+      });
+      resolved = true;
 
       // If the job failed, return
-      if (!job.is_possible || job.faulted) return;
+      if (!job?.is_possible || job.faulted) return;
     }
 
     // Delete the cancel function if we finished without a cancel request
     if (!cancelled) jobRequestCancels.delete(message.channel.id);
 
-    const botMessages = this.parseInput(job.generations[0]?.text || "...");
+    const botMessages = parseBotInput(
+      this.name,
+      job.generations[0]?.text || "..."
+    );
 
     let threadId: string | undefined;
     let webhook: Webhook | undefined;

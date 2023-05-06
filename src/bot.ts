@@ -14,6 +14,8 @@ try {
   // Do nothing.
 }
 
+import "@sapphire/plugin-logger/register";
+
 const client = new SapphireClient({
   intents: [
     GatewayIntentBits.Guilds,
