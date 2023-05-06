@@ -102,3 +102,16 @@ dist
 
 # TernJS port file
 .tern-port
+
+# Local Database
+data.db
+data.db-journal
+
+# Yarn V2
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions

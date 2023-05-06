@@ -12,6 +12,7 @@
     "dev:bot": "npm run build && npm run start:bot",
     "fmt": "prettier --write .",
     "lint": "eslint",
+    "prepare": "prisma generate",
     "start:server": "node dist/server.js",
     "start:cluster": "node dist/cluster.js",
     "start:bot": "node dist/bot.js"
@@ -54,7 +55,7 @@
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-prettier": "^4.2.1",
     "prettier": "^2.8.8",
-    "prisma": "4.13.0",
+    "prisma": "^4.13.0",
     "rimraf": "^5.0.0",
     "typescript": "^5.0.4"
   },
