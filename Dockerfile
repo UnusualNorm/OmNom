@@ -1,16 +1,12 @@
 FROM node:18 as builder
-
 WORKDIR /app
 COPY . .
 
 RUN yarn install --immutable
-
-RUN rm node_modules/.prisma
-RUN npx prisma generate
 RUN yarn build
 
-FROM node:18
 
+FROM node:18
 WORKDIR /app
 COPY . .
 
