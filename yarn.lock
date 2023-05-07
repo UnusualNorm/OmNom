@@ -484,6 +484,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@sapphire/utilities@npm:^3.11.2":
+  version: 3.11.2
+  resolution: "@sapphire/utilities@npm:3.11.2"
+  checksum: af06b3f52156af397a3be564f992bedefd728ea2d44fee8ffdc00242de0454075e722091cc213d4ad2fb4ef5c3b78740bf5e7f75242851d31a56206f51a8f403
+  languageName: node
+  linkType: hard
+
 "@tokenizer/token@npm:^0.3.0":
   version: 0.3.0
   resolution: "@tokenizer/token@npm:0.3.0"
@@ -2565,7 +2572,7 @@ __metadata:
     "@sapphire/framework": ^4.4.2
     "@sapphire/plugin-logger": ^3.0.4
     "@sapphire/plugin-subcommands": ^4.0.1
-    "@sapphire/utilities": ^3.11.1
+    "@sapphire/utilities": ^3.11.2
     "@tsconfig/esm": ^1.0.3
     "@tsconfig/node-lts": ^18.12.1
     "@tsconfig/strictest": ^2.0.1
