@@ -5,12 +5,6 @@ __metadata:
   version: 6
   cacheKey: 8
 
-".prisma@link:node-modules/.prisma::locator=omnom%40workspace%3A.":
-  version: 0.0.0-use.local
-  resolution: ".prisma@link:node-modules/.prisma::locator=omnom%40workspace%3A."
-  languageName: node
-  linkType: soft
-
 "@deno/shim-deno-test@npm:^0.3.2":
   version: 0.3.3
   resolution: "@deno/shim-deno-test@npm:0.3.3"

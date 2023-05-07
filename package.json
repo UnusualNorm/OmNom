@@ -12,6 +12,7 @@
     "dev:bot": "npm run build && npm run start:bot",
     "fmt": "prettier --write .",
     "lint": "eslint",
+    "prepare": "prisma generate",
     "start:server": "node dist/server.js",
     "start:cluster": "node dist/cluster.js",
     "start:bot": "node dist/bot.js"
@@ -57,9 +58,6 @@
     "prisma": "^4.13.0",
     "rimraf": "^5.0.0",
     "typescript": "^5.0.4"
-  },
-  "resolutions": {
-    ".prisma": "link:node-modules/.prisma"
   },
   "packageManager": "yarn@3.5.0"
 }

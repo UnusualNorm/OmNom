@@ -103,10 +103,6 @@ dist
 # TernJS port file
 .tern-port
 
-# Local Database
-data.db
-data.db-journal
-
 # Yarn V2
 .pnp.*
 .yarn/*
@@ -115,3 +111,6 @@ data.db-journal
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Prisma
+prisma/migrations/
