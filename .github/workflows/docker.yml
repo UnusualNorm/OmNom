@@ -24,8 +24,8 @@ jobs:
           VERSION=main
           SHORTREF=${GITHUB_SHA::8}
           # If this is git tag, use the tag name as a docker tag
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/v}
+          if [[ $GITHUB_REF =~ ^refs/tags/ ]]; then
+            VERSION=${GITHUB_REF/refs\/tags\//}
           fi
           TAGS="${DOCKER_IMAGE}:${VERSION},${DOCKER_IMAGE}:${SHORTREF}"
           # If the VERSION looks like a version number, assume that
@@ -59,13 +59,13 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ github.event_name != 'release' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.prep.outputs.tags }}
 
       - name: Generate Image Artifact
         run: |
-          docker save ${{ steps.prep.outputs.docker_image }} -o image.tar
+          docker save ${DOCKER_IMAGE}:${SHORTREF} -o image.tar
 
       - name: Upload Image Artifact
         uses: actions/upload-artifact@v2
