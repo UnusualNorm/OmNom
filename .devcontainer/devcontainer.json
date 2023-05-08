@@ -21,13 +21,14 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "wayou.vscode-todo-highlight",
-        "GitHub.copilot",
-        "eamodio.gitlens",
-        "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint",
-        "Prisma.prisma"
-      ]
+		"wayou.vscode-todo-highlight",
+		"GitHub.copilot",
+		"eamodio.gitlens",
+		"esbenp.prettier-vscode",
+		"dbaeumer.vscode-eslint",
+		"Prisma.prisma",
+		"github.vscode-github-actions"
+	]
     }
   }
 

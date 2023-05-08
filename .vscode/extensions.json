@@ -5,6 +5,7 @@
     "wayou.vscode-todo-highlight",
     "github.copilot",
     "eamodio.gitlens",
-    "prisma.prisma"
+    "prisma.prisma",
+    "github.vscode-github-actions"
   ]
 }
