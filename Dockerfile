@@ -8,7 +8,13 @@ RUN yarn build
 
 FROM node:20-alpine
 WORKDIR /app
-COPY .yarn/ .yarnrc.yml prisma/ package.json yarn.lock ./
+
+COPY package.json yarn.lock/ .yarnrc.yml ./
+
+COPY .yarn ./.yarn
+COPY prisma ./prisma
+
+RUN apk add --no-cache make gcc g++ python3
 
 RUN yarn workspaces focus --production
 RUN yarn install --immutable
