@@ -65,7 +65,9 @@ jobs:
 
       - name: Generate Image Artifact
         run: |
-          docker save ${DOCKER_IMAGE}:${SHORTREF} -o image.tar
+          DOCKER_IMAGE=unusualnorm/omnom
+          SHORTREF=${GITHUB_SHA::8}
+          docker save -o image.tar ${DOCKER_IMAGE}:${SHORTREF}
 
       - name: Upload Image Artifact
         uses: actions/upload-artifact@v2
