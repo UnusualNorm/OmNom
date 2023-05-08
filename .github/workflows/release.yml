@@ -5,7 +5,7 @@ on:
       - main
 
 jobs:
-  build:
+  release:
     name: Release
     runs-on: ubuntu-latest
     steps:

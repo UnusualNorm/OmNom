@@ -7,10 +7,11 @@ on:
       - main
   pull_request:
   release:
-    types: [created]
+    types: [published]
 
 jobs:
-  docker:
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
