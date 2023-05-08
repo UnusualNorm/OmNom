@@ -17,6 +17,8 @@ jobs:
       - name: Auto-Create Release
         uses: justincy/github-action-npm-release@2.0.2
         id: release
+        with:
+          token: ${{ secrets.ACCESS_TOKEN }}
 
       - name: Print Created Release
         if: ${{ steps.release.outputs.released == 'true' }}
