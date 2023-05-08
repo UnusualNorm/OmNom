@@ -58,19 +58,3 @@ jobs:
           platforms: ${{ github.event_name != 'release' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.prep.outputs.tags }}
-          outputs: type=docker,dest=/tmp/image.tar
-
-      - name: Upload Image Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: image
-          path: /tmp/image.tar
-
-      - name: Upload to Release
-        if: github.event_name == 'release'
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: /tmp/image.tar
-          asset_name: image.tar
-          asset_content_type: application/x-tar
