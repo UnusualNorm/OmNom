@@ -6,9 +6,9 @@ RUN yarn install --immutable
 RUN yarn build
 
 
-FROM node:20
+FROM node:20-alpine
 WORKDIR /app
-COPY . .
+COPY .yarn/ .yarnrc.yml prisma/ package.json yarn.lock ./
 
 RUN yarn workspaces focus --production
 RUN yarn install --immutable
