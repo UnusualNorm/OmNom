@@ -19,6 +19,7 @@ RUN apk add --no-cache make gcc g++ python3
 
 RUN yarn workspaces focus --production
 RUN yarn install --immutable
+RUN yarn cache clean
 
 COPY --from=builder /app/dist ./dist
 CMD [ "yarn", "run", "start:bot" ]
