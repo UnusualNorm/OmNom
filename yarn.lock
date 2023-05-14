@@ -721,14 +721,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitalets/google-translate-api@npm:^9.1.0":
-  version: 9.1.0
-  resolution: "@vitalets/google-translate-api@npm:9.1.0"
+"@vitalets/google-translate-api@npm:^9.2.0":
+  version: 9.2.0
+  resolution: "@vitalets/google-translate-api@npm:9.2.0"
   dependencies:
     "@types/http-errors": ^1.8.2
     http-errors: ^2.0.0
     node-fetch: ^2.6.7
-  checksum: ad720f1d4dc8c54f0db614f788e78532a7e026afea6facd973ce0b165a955a3c5d82dc60cf5b209d251b610a425393f5f884642a88e194a91d8427a0485e116f
+  checksum: 24712ce3db01fe3a3b47718917124989f3f748e50043cd9a61983fe150d1309dde04c734d260623ed8901ee50e1a2ebbad494e504bb7d9d7544cc1f2a907d29b
   languageName: node
   linkType: hard
 
@@ -2610,7 +2610,7 @@ __metadata:
     "@types/node": ^20.1.0
     "@typescript-eslint/eslint-plugin": ^5.59.2
     "@typescript-eslint/parser": ^5.59.2
-    "@vitalets/google-translate-api": ^9.1.0
+    "@vitalets/google-translate-api": ^9.2.0
     async-g-i-s: "https://github.com/UnusualNorm/async-g-i-s.git#commit=dbeb7e94b4674dfd58de4bae6c1807600ce5fa20"
     bufferutil: ^4.0.7
     discord-api-types: ^0.37.42

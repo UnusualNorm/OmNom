@@ -28,7 +28,7 @@
     "@sapphire/plugin-logger": "^3.0.4",
     "@sapphire/plugin-subcommands": "^4.0.1",
     "@sapphire/utilities": "^3.11.2",
-    "@vitalets/google-translate-api": "^9.1.0",
+    "@vitalets/google-translate-api": "^9.2.0",
     "async-g-i-s": "https://github.com/UnusualNorm/async-g-i-s.git#commit=dbeb7e94b4674dfd58de4bae6c1807600ce5fa20",
     "bufferutil": "^4.0.7",
     "discord-api-types": "^0.37.42",
