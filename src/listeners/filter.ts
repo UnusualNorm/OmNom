@@ -21,6 +21,7 @@ export class FilterListener extends Listener {
     if (!message.inGuild() || !hasPermissions(message.channel)) return;
 
     const webhook = await getWebhook(message.channel, true);
+    if (message.webhookId == webhook.id) return;
 
     const filters = await getFiltersToApply(
       message.guildId,
