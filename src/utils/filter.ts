@@ -93,6 +93,11 @@ export async function applyFilters(
   filters: Filter[]
 ): Promise<WebhookMessageCreateOptions> {
   let newMessage = message;
-  for (const filter of filters) newMessage = await filter.run(newMessage);
+  for (const filter of filters) {
+    if (filter.partial) {
+      await filter.test(newMessage) ? await filter.run(newMessage) : newMessage
+    }
+    newMessage = await filter.run(newMessage);
+  }
   return newMessage;
 }
