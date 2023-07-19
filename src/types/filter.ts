@@ -8,7 +8,9 @@ export interface Filter {
 
   test?(message: WebhookMessageCreateOptions): boolean;
 
-  run(message: WebhookMessageCreateOptions): WebhookMessageCreateOptions | Promise<WebhookMessageCreateOptions>;
+  run(
+    message: WebhookMessageCreateOptions
+  ): WebhookMessageCreateOptions | Promise<WebhookMessageCreateOptions>;
 
   preview(text: string, username: string): string | Promise<string>;
 }
