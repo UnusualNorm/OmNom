@@ -27,9 +27,15 @@ export const communist: Filter = {
   id: "communist",
   name: "Communist",
   description: "This is our filter, comrade!",
+  partial: true,
 
-  run: (message) => ({
-    ...message,
+  // test if message needs to be altered
+  test: (message) => {
+    if (filter(message.content) != message.content) return true
+  },
+  
+  run: (message) => ({ 
+    ...message, 
     content: message.content ? filter(message.content) : message.content,
   }),
 
